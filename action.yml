@@ -1,0 +1,14 @@
+name: "VBA Build Action"
+description: "Build VBA-enabled Office documents using GitHub Actions"
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Run VBA Build"
+      shell: pwsh
+      run: |
+        .\Main.ps1
+outputs:
+  result:
+    description: "The result of the VBA build process."
+    value: "success"
