@@ -1,6 +1,14 @@
 name: Test Build VBA
 on:
-  - workflow_dispatch
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev[0-9]*
+
+permissions:
+  id-token: write
+  attestations: write
 
 jobs:
   build:
@@ -8,13 +16,54 @@ jobs:
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
-      - name: "Build VBA-Enabled Workbook (using own action)"
+      - name: "Build VBA-Enabled Documents (using own action)"
+        id: build_vba
         uses: ./
         with:
           sourceDir: "./tests"
-      - name: "Upload Artifact"
+        timeout-minutes: 10
+      - name: "Display Chocolatey logs in case of Office install failure"
+        if: failure() && steps.build_vba.outcome == 'failure'
+        run: |
+          if (Test-Path -Path "C:\ProgramData\chocolatey\logs\chocolatey.log") {
+            Write-Host "============ Chocolatey Log Contents ============"
+            Get-Content -Path "C:\ProgramData\chocolatey\logs\chocolatey.log"
+            Write-Host "================================================="
+          } else {
+            Write-Host "Chocolatey log file not found at C:\ProgramData\chocolatey\logs\chocolatey.log"
+          }
+        shell: pwsh
+      - name: "Upload Build Artifact"
+        uses: actions/upload-artifact@v4
+        id: "upload"
+        with:
+          name: "VBA-Enabled-Documents"
+          path: "./tests/out/*"
+          if-no-files-found: warn
+      - name: "Take exiting screenshot"
+        if: always()
+        run: |
+          . "./scripts/utils/Screenshot.ps1"
+          # Create the directory if it does not exist
+          if (!(Test-Path -Path ${{ github.workspace }}/tests/screenshots)) {
+            New-Item -ItemType Directory -Path ${{ github.workspace }}/tests/screenshots
+          }
+          # Minimize PowerShell window
+          . "./scripts/utils/Minimize.ps1"
+          Minimize-Window "Administrator: C:\Program Files\PowerShell\7\pwsh.EXE"
+          Take-Screenshot -OutputPath ${{ github.workspace }}/tests/screenshots/ExitScreenshot.png
+        shell: pwsh      
+      # TODO: Check if better method to visualize the screenshots: https://github.com/actions/upload-artifact/issues/14
+      - name: "Upload Screenshots"
+        # Run this step even if the build failed
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: "VBA-Enabled Workbook"
-          path: "./*.xl*"
+          name: "Screenshots"
+          path: "./tests/screenshots/*"
           if-no-files-found: warn
+      - name: "Attestation"
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: "VBA-Enabled-Documents"
+          subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}

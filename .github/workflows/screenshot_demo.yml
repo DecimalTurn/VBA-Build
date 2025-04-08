@@ -10,9 +10,12 @@ jobs:
         uses: actions/checkout@v4
       - name: "Take Screenshot"
         run: |
+          # Minimize the CMD window
+          . "./scripts/utils/Minimize.ps1"
+          Minimize-Window "Administrator: C:\actions"
           # Take a screenshot of the Office application
           . "./scripts/utils/Screenshot.ps1"
-          Take-Screenshot -OutputPath $outputDir + "Screenshot_${fileNameNoExt}.png"
+          Take-Screenshot -OutputPath "Screenshot.png"
       - name: "Upload Screenshot"
         uses: actions/upload-artifact@v4
         with:

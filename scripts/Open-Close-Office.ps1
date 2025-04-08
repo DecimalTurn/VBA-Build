@@ -85,13 +85,31 @@ function Close-OfficeProcesses {
 }
 
 
-# Open Excel just to make sure it's working properly and to see if opening it 
-# will cause registry entries to be created
-# Create a new Excel application
-$excelApp = New-Object -ComObject Excel.Application
+$officeApps = $args[0]
+if (-not $officeApps) {
+    Write-Host "No Office applications specified. Exiting script." -ForegroundColor Red
+    exit 1
+}
 
-# Set it to nothing
-$excelApp = $null
+# Convert the comma-separated string to an array
+$officeApps = $officeApps -split ',' | ForEach-Object { $_.Trim() }
+
+# Open each required Office application
+foreach ($app in $officeApps) {
+    Write-Host "Opening $app application..." -ForegroundColor Cyan
+    try {
+        # Create a new COM object for the specified Office application
+        $comObject = New-Object -ComObject "$app.Application"
+        Write-Host "$app application opened successfully." -ForegroundColor Green
+        $comObject = $null
+    }
+    catch {
+        Write-Host "Failed to open $app application: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+# Wait for a moment to ensure processes are opened
+Start-Sleep -Seconds 5
 
 # Execute the function
 Close-OfficeProcesses
