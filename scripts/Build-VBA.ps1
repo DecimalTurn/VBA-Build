@@ -4,12 +4,25 @@
 # and imports all .bas files from a specified folder into the workbook.
 # It then saves and closes the workbook, and cleans up the COM objects.
 
+$folderName = $args[0]
+if (-not $folderName) {
+    Write-Host "Error: No folder name specified. Usage: Build-VBA.ps1 <FolderName>"
+    exit 1
+}
+$fileName = $folderName.Substring(0, $folderName.LastIndexOf('.'))
+$fileExtension = $folderName.Substring($folderName.LastIndexOf('.') + 1)
+
+if ($fileExtension -ne "xlsm") {
+    Write-Host "Error: Unsupported file extension. Expected 'xlsm', got '$fileExtension'."
+    exit 1
+}
+
 # Get the current working directory
 $currentDir = (Get-Location).Path
 Write-Host "Current working directory: $currentDir"
 
 # Define the Excel file path
-$excelFile = Join-Path $currentDir "skeleton.xlsm"
+$excelFile = Join-Path $currentDir $folderName
 
 # Create a new Excel application
 $excelApp = New-Object -ComObject Excel.Application
@@ -26,7 +39,7 @@ if ($null -eq $wb) {
 # $excelApp.Visible = $true
 
 # Define the module folder path
-$moduleFolder = Join-Path $currentDir "src\skeleton.xlsm\Modules"
+$moduleFolder = Join-Path $currentDir "src\$folderName\Modules"
 
 Write-Host "Module folder path: $moduleFolder"
 
