@@ -1,4 +1,4 @@
-# This script uses 7-Zip to compress files and folders in the src/XMLsource directory into a zip file.
+# This script uses 7-Zip to compress files and folders in the ${folderName}/XMLsource directory into a zip file.
 
 # Read the name of the folder from the argument passed to the script
 $folderName = $args[0]
@@ -7,8 +7,12 @@ if (-not $folderName) {
     exit 1
 }
 
-$fileName = $folderName.Substring(0, $folderName.LastIndexOf('.'))
-$fileExtension = $folderName.Substring($folderName.LastIndexOf('.') + 1)
+$sourceDir = $folderName.Substring(0, $folderName.LastIndexOf('/'))
+
+$filNameWithExtension = $folderName.Substring($folderName.LastIndexOf('/') + 1)
+$fileName = $filNameWithExtension.Substring(0, $filNameWithExtension.LastIndexOf('.'))
+$fileExtension = $filNameWithExtension.Substring($filNameWithExtension.LastIndexOf('.') + 1)
+
 
 Write-Host "Staring the compression process..."
 
@@ -16,8 +20,8 @@ $currentDir = Get-Location
 Write-Host "Current directory: $currentDir"
 
 # Define the source folder and the output zip file
-$sourceFolder = Join-Path -Path $currentDir -ChildPath "src/$folderName/XMLsource/"
-$outputZipFile = Join-Path -Path $currentDir -ChildPath "src/$folderName/XMLoutput/$fileName.zip"
+$sourceFolder = Join-Path -Path $currentDir -ChildPath "$folderName/XMLsource/"
+$outputZipFile = Join-Path -Path $currentDir -ChildPath "$folderName/XMLoutput/$fileName.zip"
 
 # Path to the 7-Zip executable
 $sevenZipPath = "7z"  # Assumes 7-Zip is in the system PATH. Adjust if necessary.
@@ -88,24 +92,31 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Compression completed successfully. Zip file created at: $absoluteDestinationFolder"
 
 
-# Create a copy of the zip file in the src/$folderName/XMLoutput folder at the /src level
-$copySource = "src/$folderName/XMLoutput/$fileName.zip"
-$renameDestination = "./$folderName"
+# Create a copy of the zip file in the $folderName/XMLoutput folder at the top level
+$copySource = "$folderName/XMLoutput/$fileName.zip"
+$renameDestinationFolder = "$sourceDir/out"
+$renameDestinationFilePath = "$renameDestinationFolder/$fileName.$fileExtension"
+
+# Create rename destination folder if it doesn't exist
+if (-not (Test-Path $renameDestinationFolder)) {
+    Write-Host "Creating destination folder: $renameDestinationFolder"
+    New-Item -ItemType Directory -Path $renameDestinationFolder -Force | Out-Null
+}
 
 # Delete the destination file if it exists
-if (Test-Path $renameDestination) {
-    Write-Host "Deleting existing file: $renameDestination"
-    Remove-Item -Path $renameDestination -Force
+if (Test-Path $renameDestinationFilePath) {
+    Write-Host "Deleting existing file: $renameDestinationFilePath"
+    Remove-Item -Path $renameDestinationFilePath -Force
 }
 
 # Copy and rename the file in one step
-Write-Host "Copying and renaming $copySource to $renameDestination..."
-Copy-Item -Path $copySource -Destination $renameDestination -Force
+Write-Host "Copying and renaming $copySource to $renameDestinationFilePath"
+Copy-Item -Path $copySource -Destination $renameDestinationFilePath -Force
 
 # Verify if the file exists after the copy
-if (-not (Test-Path $renameDestination)) {
-    Write-Host "Error: File not found after copy: $renameDestination"
+if (-not (Test-Path $renameDestinationFilePath)) {
+    Write-Host "Error: File not found after copy: $renameDestinationFilePath"
     exit 1
 }
 
-Write-Host "File successfully copied and renamed to: $renameDestination"
+Write-Host "File successfully copied and renamed to: $renameDestinationFilePath"

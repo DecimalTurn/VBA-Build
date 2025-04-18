@@ -7,7 +7,7 @@ Write-Host "Current directory: $(pwd)"
 Write-Host "Using source directory: $SourceDir"
 
 # Read name of the folders under the specified source directory into an array
-$folders = Get-ChildItem -Path "$PSScriptRoot\$SourceDir" -Directory | Select-Object -ExpandProperty Name
+$folders = Get-ChildItem -Path "$PSScriptRoot/$SourceDir" -Directory | Select-Object -ExpandProperty Name
 Write-Host "Folders in ${SourceDir}: $folders"
 
 # Check if the folders array is empty
@@ -33,6 +33,7 @@ function Get-OfficeApp {
     }
 }
 
+# Create a list of Office applications that are needed based on the file extensions of the folders
 foreach ($folder in $folders) {
     $FileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
     $app = Get-OfficeApp -FileExtension $FileExtension
@@ -47,33 +48,28 @@ foreach ($folder in $folders) {
     }
 }
 
+
+# We need to open and close the Office applications before we can enable VBOM
+Write-Host "Open and close Office applications"
+. "$PSScriptRoot/scripts/Open-Close-Office.ps1" $officeApps
+Write-Host "========================="
+
+# Enable VBOM for each Office application
 foreach ($app in $officeApps) {
     Write-Host "Enabling VBOM for $app"
-    . "$PSScriptRoot\scripts\Enable-VBOM.ps1" $app
+    . "$PSScriptRoot/scripts/Enable-VBOM.ps1" $app
     Write-Host "========================="
 }
 
-Write-Host "Open and close Office applications"
-. "$PSScriptRoot\scripts\Open-Close-Office.ps1" $officeApps
-Write-Host "========================="
-
 foreach ($folder in $folders) {
     $app = Get-OfficeApp -FileExtension $folder.Substring($folder.LastIndexOf('.') + 1)
-    if ($app) {
-        Write-Host "Creating $app document"
-        . "$PSScriptRoot\scripts\Create-$app.ps1" $folder
-        Write-Host "========================="
-    } else {
-        Write-Host "Unknown file extension: $folder. Skipping..."
-        continue
-    }
 
     if ($app -ne "Access") {
         Write-Host "Create Zip file and rename it to Office document target"
-        . "$PSScriptRoot\scripts\Zip-It.ps1" $folder
+        . "$PSScriptRoot/scripts/Zip-It.ps1" "${SourceDir}/${folder}"
         Write-Host "========================="
     }
 
     Write-Host "Importing VBA code into Office document" 
-    . "$PSScriptRoot\scripts\Build-VBA.ps1" $folder
+    . "$PSScriptRoot/scripts/Build-VBA.ps1" "${SourceDir}/${folder}" "$app"
 }

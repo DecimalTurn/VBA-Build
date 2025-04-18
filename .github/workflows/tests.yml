@@ -20,5 +20,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "VBA-Enabled Workbook"
-          path: "./*.xl*"
+          path: "./tests/out/*"
           if-no-files-found: warn
