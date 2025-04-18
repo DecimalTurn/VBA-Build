@@ -80,7 +80,7 @@ if (-not (Test-VBOMAccess -officeAppName $officeAppName)) {
 $officeApp = New-Object -ComObject "$officeAppName.Application"
 
 # Make app visible (uncomment if needed)
-# $officeApp.Visible = $true
+$officeApp.Visible = $true
 
 # Check if the application instance was created successfully
 if ($null -eq $officeApp) {
@@ -159,7 +159,12 @@ $basFiles | ForEach-Object {
 # Take a screenshot of the Office application
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/utils/Screenshot.ps1"
-Take-Screenshot -OutputPath "${outputDir}Screenshot_${fileNameNoExt}.png"
+$screenshotDir = (DirUp $outputDir) + "/screenshots"
+if (-not (Test-Path $screenshotDir)) {
+    New-Item -ItemType Directory -Path $screenshotDir -Force | Out-Null
+    Write-Host "Created screenshot directory: $screenshotDir"
+}
+Take-Screenshot -OutputPath "${$screenshotDir}Screenshot_${fileNameNoExt}.png"
 
 # Save the document
 $doc.Save()
