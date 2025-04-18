@@ -1,0 +1,20 @@
+name: Test Build VBA
+on:
+  - workflow_dispatch
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Build VBA-Enabled Workbook (using own action)"
+        uses: ./
+        with:
+          sourceDir: "./tests"
+      - name: "Upload Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "VBA-Enabled Workbook"
+          path: "./*.xl*"
+          if-no-files-found: warn

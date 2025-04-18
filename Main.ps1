@@ -1,4 +1,7 @@
-Write-Host "Current directory: $(pwd)"
+# Get the source directory from command line argument or use default "src"
+param(
+    [string]$SourceDir = "src"
+)
 
 Write-Host "Changing zip file name and location"
 . "$PSScriptRoot\Zip-It.ps1"
