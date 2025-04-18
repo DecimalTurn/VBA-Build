@@ -156,6 +156,11 @@ $basFiles | ForEach-Object {
     }
 }
 
+# Take a screenshot of the Office application
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+. "$scriptPath/utils/Screenshot.ps1"
+Take-Screenshot -OutputPath "${outputDir}Screenshot_${fileNameNoExt}.png"
+
 # Save the document
 $doc.Save()
 # Close the document
