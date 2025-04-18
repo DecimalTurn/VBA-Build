@@ -1,0 +1,21 @@
+#Create a simple workflow to take a screenshot of the Windows worker's desktop
+name: Screenshot
+on:
+  workflow_dispatch:
+jobs:   
+  screenshot:
+    runs-on: windows-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Take Screenshot"
+        run: |
+          # Take a screenshot of the Office application
+          $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+          . "$scriptPath/scripts/utils/Screenshot.ps1"
+          Take-Screenshot -OutputPath "Screenshot_${fileNameNoExt}.png"
+      - name: "Upload Screenshot"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "Screenshot"
+          path: "screenshot.png"
