@@ -3,13 +3,16 @@ param(
     [string]$SourceDir = "src"
 )
 
-# Read name of the folders under src into an array
-$folders = Get-ChildItem -Path "$PSScriptRoot\src" -Directory | Select-Object -ExpandProperty Name
-Write-Host "Folders in src: $folders"
+Write-Host "Current directory: $(pwd)"
+Write-Host "Using source directory: $SourceDir"
+
+# Read name of the folders under the specified source directory into an array
+$folders = Get-ChildItem -Path "$PSScriptRoot\$SourceDir" -Directory | Select-Object -ExpandProperty Name
+Write-Host "Folders in $SourceDir: $folders"
 
 # Check if the folders array is empty
 if ($folders.Count -eq 0) {
-    Write-Host "No folders found in src. Exiting script."
+    Write-Host "No folders found in $SourceDir. Exiting script."
     exit 1
 }
 
