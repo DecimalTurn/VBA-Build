@@ -85,7 +85,7 @@ function Close-OfficeProcesses {
 }
 
 
-$officeApps = arg[0]
+$officeApps = $args[0]
 if (-not $officeApps) {
     Write-Host "No Office applications specified. Exiting script." -ForegroundColor Red
     exit 1

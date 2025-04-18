@@ -16,7 +16,8 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"ms-vscode.powershell"
+				"ms-vscode.powershell",
+				"github.vscode-github-actions"
 			]
 		}
 	}

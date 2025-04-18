@@ -8,11 +8,11 @@ Write-Host "Using source directory: $SourceDir"
 
 # Read name of the folders under the specified source directory into an array
 $folders = Get-ChildItem -Path "$PSScriptRoot\$SourceDir" -Directory | Select-Object -ExpandProperty Name
-Write-Host "Folders in $SourceDir: $folders"
+Write-Host "Folders in ${SourceDir}: $folders"
 
 # Check if the folders array is empty
 if ($folders.Count -eq 0) {
-    Write-Host "No folders found in $SourceDir. Exiting script."
+    Write-Host "No folders found in ${SourceDir}. Exiting script."
     exit 1
 }
 
@@ -47,7 +47,7 @@ foreach ($folder in $folders) {
     }
 }
 
-foreach $app in $officeApps {
+foreach ($app in $officeApps) {
     Write-Host "Enabling VBOM for $app"
     . "$PSScriptRoot\scripts\Enable-VBOM.ps1" $app
     Write-Host "========================="
@@ -57,8 +57,7 @@ Write-Host "Open and close Office applications"
 . "$PSScriptRoot\scripts\Open-Close-Office.ps1" $officeApps
 Write-Host "========================="
 
-foreach $folder in $folders {
-
+foreach ($folder in $folders) {
     $app = Get-OfficeApp -FileExtension $folder.Substring($folder.LastIndexOf('.') + 1)
     if ($app) {
         Write-Host "Creating $app document"
@@ -69,7 +68,7 @@ foreach $folder in $folders {
         continue
     }
 
-    if ($app -neq "Access") {
+    if ($app -ne "Access") {
         Write-Host "Create Zip file and rename it to Office document target"
         . "$PSScriptRoot\scripts\Zip-It.ps1" $folder
         Write-Host "========================="
@@ -77,5 +76,4 @@ foreach $folder in $folders {
 
     Write-Host "Importing VBA code into Office document" 
     . "$PSScriptRoot\scripts\Build-VBA.ps1" $folder
-
 }
