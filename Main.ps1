@@ -1,14 +1,14 @@
 # Get the source directory from command line argument or use default "src"
 
+param(
+    [string]$SourceDir = "src"
+)
+
 # Import utility functions
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/scripts/utils/Minimize.ps1" # To get better screenshots we need to minimize the "Administrator" CMD window
 . "$scriptPath/scripts/utils/TimedMessage.ps1"
 . "$scriptPath/scripts/utils/Invoke.ps1" # Function to invoke a script with a timeout
-
-param(
-    [string]$SourceDir = "src"
-)
 
 # Start the main timer
 $mainTimer = [System.Diagnostics.Stopwatch]::StartNew()
