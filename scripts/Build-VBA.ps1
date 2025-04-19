@@ -91,11 +91,11 @@ if ($null -eq $officeApp) {
 # Open the document
 if ($officeAppName -eq "Excel") {
     $doc = $officeApp.Workbooks.Open($outputFilePath)
-} elseif ($officeApp -eq "Word") {
+} elseif ($officeAppName -eq "Word") {
     $doc = $officeApp.Documents.Open($outputFilePath)
-} elseif ($officeApp -eq "PowerPoint") {
+} elseif ($officeAppName -eq "PowerPoint") {
     $doc = $officeApp.Presentations.Open($outputFilePath)
-} elseif ($officeApp -eq "Access") {
+} elseif ($officeAppName -eq "Access") {
     $doc = $officeApp.OpenCurrentDatabase($outputFilePath)
 } else {
     Write-Host "Error: Unsupported Office application: $officeAppName"
@@ -159,7 +159,7 @@ $basFiles | ForEach-Object {
 # Take a screenshot of the Office application
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/utils/Screenshot.ps1"
-$screenshotDir = (DirUp $outputDir) + "/screenshots"
+$screenshotDir = (DirUp $outputDir) + "screenshots/"
 if (-not (Test-Path $screenshotDir)) {
     New-Item -ItemType Directory -Path $screenshotDir -Force | Out-Null
     Write-Host "Created screenshot directory: $screenshotDir"
