@@ -1,4 +1,3 @@
-
 function Invoke-ScriptWithTimeout {
     param (
         [string]$ScriptPath,
@@ -7,14 +6,15 @@ function Invoke-ScriptWithTimeout {
     )
     
     $job = Start-Job -ScriptBlock {
-        param($scriptPath, $args)
-        & $scriptPath $args
+        param($scriptPath, $arguments)
+        # Properly expand the arguments when calling the script
+        & $scriptPath @arguments
     } -ArgumentList $ScriptPath, $Arguments
     
     $completed = Wait-Job -Job $job -Timeout $TimeoutSeconds
     
     if ($completed -eq $null) {
-        Write-Host "Script execution timed out after $TimeoutSeconds seconds" -ForegroundColor Red
+        Write-Host "🔴 Script execution timed out after $TimeoutSeconds seconds" -ForegroundColor Red
         Stop-Job -Job $job
         Remove-Job -Job $job -Force
         return $false

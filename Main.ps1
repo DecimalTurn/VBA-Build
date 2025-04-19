@@ -9,6 +9,7 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/scripts/utils/Minimize.ps1" # To get better screenshots we need to minimize the "Administrator" CMD window
 . "$scriptPath/scripts/utils/TimedMessage.ps1"
 . "$scriptPath/scripts/utils/Invoke.ps1" # Function to invoke a script with a timeout
+. "$scriptPath/utils/Screenshot.ps1"
 
 # Start the main timer
 $mainTimer = [System.Diagnostics.Stopwatch]::StartNew()
@@ -111,8 +112,15 @@ foreach ($folder in $folders) {
     $success = Invoke-ScriptWithTimeout -ScriptPath $buildVbaScriptPath -Arguments @("${SourceDir}/${folder}", "$app") -TimeoutSeconds 300
 
     if (-not $success) {
-        Write-TimedMessage "🔴 Build-VBA.ps1 execution timed out or failed for ${folder}. Continuing with next file..." -ForegroundColor Yellow
-        # Optionally add cleanup code here
+        Write-TimedMessage "🔴 Build-VBA.ps1 execution timed out or failed for ${folder}. Continuing with next file..."
+        
+        $screenshotDir = ${SourceDir} + "screenshots/"
+        if (-not (Test-Path $screenshotDir)) {
+            New-Item -ItemType Directory -Path $screenshotDir -Force | Out-Null
+            Write-Host "Created screenshot directory: $screenshotDir"
+        }
+
+        Take-Screenshot -FileName "${screenshotDir}${app}_{{timestamp}}.png"
     }
 
     Write-TimedMessage "Completed processing folder: $folder"
