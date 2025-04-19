@@ -9,5 +9,5 @@ End Sub
 
 'This code will be called via COM to test if the VBA import was successful
 Public Sub WriteToFile()
-    Class1.ExecuteWrite()
+    Class1.ExecuteWrite
 End Sub
