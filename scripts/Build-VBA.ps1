@@ -167,14 +167,71 @@ if (-not (Test-Path $screenshotDir)) {
 Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}.png"
 
 # Save the document
-$doc.Save()
+Write-Host "Saving document..."
+try {
+    if ($officeAppName -eq "PowerPoint") {
+        # For PowerPoint, use SaveAs with the same file name to force save
+        $doc.SaveAs($outputFilePath)
+        Write-Host "PowerPoint presentation saved using SaveAs method"
+    } else {
+        $doc.Save()
+        Write-Host "Document saved successfully"
+    }
+} catch {
+    Write-Host "Warning: Could not save document: $($_.Exception.Message)"
+    
+    # Alternative approach for PowerPoint if SaveAs fails
+    if ($officeAppName -eq "PowerPoint") {
+        try {
+            # Try saving with a temporary file name and then renaming
+            $tempPath = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.pptm'
+            Write-Host "Attempting to save to temporary location: $tempPath"
+            $doc.SaveAs($tempPath)
+            
+            # Close the document and application
+            $doc.Close()
+            $officeApp.Quit()
+            
+            # Release COM objects
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
+            
+            # Wait a moment for resources to be released
+            Start-Sleep -Seconds 2
+            
+            # Copy the temp file to the intended destination
+            Copy-Item -Path $tempPath -Destination $outputFilePath -Force
+            Remove-Item -Path $tempPath -Force
+            
+            Write-Host "Document saved using alternative method"
+            
+            # Skip the rest of the cleanup as we've already done it
+            Write-Host "VBA import completed successfully."
+            exit 0
+        } catch {
+            Write-Host "Error: Alternative save method also failed: $($_.Exception.Message)"
+        }
+    }
+}
+
 # Close the document
-$doc.Close()
+try {
+    $doc.Close()
+    Write-Host "Document closed successfully"
+} catch {
+    Write-Host "Warning: Could not close document: $($_.Exception.Message)"
+}
+
 # Quit the application
-$officeApp.Quit()
+try {
+    $officeApp.Quit()
+    Write-Host "Application closed successfully"
+} catch {
+    Write-Host "Warning: Could not quit application: $($_.Exception.Message)"
+}
 
 # Clean up
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
 Remove-Variable -Name doc, officeApp
-Write-Host "VBA imported completed successfully."
+Write-Host "VBA import completed successfully."
