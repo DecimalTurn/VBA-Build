@@ -107,7 +107,43 @@ if ($officeAppName -eq "Excel") {
 } elseif ($officeAppName -eq "PowerPoint") {
     $doc = $officeApp.Presentations.Open($outputFilePath)
 } elseif ($officeAppName -eq "Access") {
-    $doc = $officeApp.OpenCurrentDatabase($outputFilePath)
+    try {
+        if ($officeApp.CurrentDb -ne $null) {
+            $officeApp.CloseCurrentDatabase()
+        }
+        
+        # Set default database properties
+        $officeApp.DefaultOpenExclusive = $false  # Initially try shared mode
+        
+        # First attempt
+        $doc = $officeApp.OpenCurrentDatabase($outputFilePath)
+        
+        # If we got $null or can't modify VBA project, try exclusive mode
+        if ($null -eq $doc -or $null -eq $doc.VBProject) {
+            $officeApp.CloseCurrentDatabase()
+            Start-Sleep -Seconds 1
+            $officeApp.DefaultOpenExclusive = $true  # Try exclusive mode
+            $doc = $officeApp.OpenCurrentDatabase($outputFilePath)
+        }
+    }
+    catch {
+        Write-Host "🟡 Warning: Error opening Access database: $($_.Exception.Message)"
+        Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
+        
+        # One more attempt after error
+        try {
+            $officeApp.Quit()
+            Start-Sleep -Seconds 2
+            $officeApp = New-Object -ComObject "Access.Application"
+            $officeApp.Visible = $true
+            $officeApp.DefaultOpenExclusive = $true
+            $doc = $officeApp.OpenCurrentDatabase($outputFilePath)
+        }
+        catch {
+            Write-Host "🔴 Error: Failed to open the database after multiple attempts: $($_.Exception.Message)"
+            exit 1
+        }
+    }
 } else {
     Write-Host "Error: Unsupported Office application: $officeAppName"
     exit 1
@@ -115,7 +151,7 @@ if ($officeAppName -eq "Excel") {
 
 # Check if the document was opened successfully
 if ($null -eq $doc) {
-    Write-Host "Error: Failed to open the document: $outputFilePath"
+    Write-Host "🔴 Error: Failed to open the document: $outputFilePath"
     Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
     exit 1
 }
