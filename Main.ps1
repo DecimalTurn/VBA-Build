@@ -48,7 +48,6 @@ foreach ($folder in $folders) {
     }
 }
 
-
 # We need to open and close the Office applications before we can enable VBOM
 Write-Host "Open and close Office applications"
 . "$PSScriptRoot/scripts/Open-Close-Office.ps1" $officeApps
@@ -60,6 +59,13 @@ foreach ($app in $officeApps) {
     . "$PSScriptRoot/scripts/Enable-VBOM.ps1" $app
     Write-Host "========================="
 }
+
+# To get better screenshots we need to minimize the "Administrator" CMD window
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+. "$scriptPath/scripts/utils/Minimize.ps1"
+
+Minimize-Window "Administrator: C:\actions"
+
 
 foreach ($folder in $folders) {
     $app = Get-OfficeApp -FileExtension $folder.Substring($folder.LastIndexOf('.') + 1)
