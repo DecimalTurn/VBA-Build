@@ -32,6 +32,10 @@ jobs:
         if: always()
         run: |
           . "./scripts/utils/Screenshot.ps1"
+          # Create the directory if it does not exist
+          if (!(Test-Path -Path ${{ github.workspace }}/tests/screenshots)) {
+            New-Item -ItemType Directory -Path ${{ github.workspace }}/tests/screenshots
+          }
           Take-Screenshot -OutputPath ${{ github.workspace }}/tests/screenshots/ExitScreenshot.png
         shell: pwsh
       - name: "Upload Screenshots"

@@ -9,7 +9,7 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/scripts/utils/Minimize.ps1" # To get better screenshots we need to minimize the "Administrator" CMD window
 . "$scriptPath/scripts/utils/TimedMessage.ps1"
 . "$scriptPath/scripts/utils/Invoke.ps1" # Function to invoke a script with a timeout
-. "$scriptPath/utils/Screenshot.ps1"
+. "$scriptPath/scripts/utils/Screenshot.ps1"
 
 # Start the main timer
 $mainTimer = [System.Diagnostics.Stopwatch]::StartNew()
@@ -120,7 +120,7 @@ foreach ($folder in $folders) {
             Write-Host "Created screenshot directory: $screenshotDir"
         }
 
-        Take-Screenshot -FileName "${screenshotDir}${app}_{{timestamp}}.png"
+        Take-Screenshot -OutputPath "${screenshotDir}${app}_{{timestamp}}.png"
     }
 
     Write-TimedMessage "Completed processing folder: $folder"
