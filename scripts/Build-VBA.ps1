@@ -110,7 +110,7 @@ if ($null -eq $doc) {
 
 # Define the module folder path
 
-$moduleFolder = Join-Path $currentDir "$folderName/Modules"
+$moduleFolder = GetAbsPath -path "$folderName/Modules" -basePath $currentDir
 Write-Host "Module folder path: $moduleFolder"
 
 #Check if the module folder does not exist create an empty one
