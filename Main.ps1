@@ -109,7 +109,7 @@ foreach ($folder in $folders) {
     Write-TimedMessage "Importing VBA code into Office document" -StartNewStep
     # Replace the direct Build-VBA call with the timeout version
     $buildVbaScriptPath = "$PSScriptRoot/scripts/Build-VBA.ps1"
-    $success = Invoke-ScriptWithTimeout -ScriptPath $buildVbaScriptPath -Arguments @("${SourceDir}/${folder}", "$app") -TimeoutSeconds 300
+    $success = Invoke-ScriptWithTimeout -ScriptPath $buildVbaScriptPath -Arguments @("${SourceDir}/${folder}", "$app") -TimeoutSeconds 60
 
     if (-not $success) {
         Write-TimedMessage "🔴 Build-VBA.ps1 execution timed out or failed for ${folder}. Continuing with next file..."
