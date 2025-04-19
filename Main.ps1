@@ -64,12 +64,23 @@ foreach ($app in $officeApps) {
 foreach ($folder in $folders) {
     $app = Get-OfficeApp -FileExtension $folder.Substring($folder.LastIndexOf('.') + 1)
 
+    $ext = ""
     if ($app -ne "Access") {
+        $ext = "zip"
         Write-Host "Create Zip file and rename it to Office document target"
         . "$PSScriptRoot/scripts/Zip-It.ps1" "${SourceDir}/${folder}"
-        Write-Host "========================="
     }
+    else {
+        $ext = "accdb"
+        Write-Host "Copy folder and content to Skeleton folder"
+        Copy-Item -Path "${SourceDir}/${folder}/DBSource" -Destination "${SourceDir}/${folder}/Skeleton" -Recurse -Force
+    }
+
+    Write-Host "Copy and rename the file to the correct name"
+    . "$PSScriptRoot/scripts/Rename-It.ps1" "${SourceDir}/${folder}" "$ext"
 
     Write-Host "Importing VBA code into Office document" 
     . "$PSScriptRoot/scripts/Build-VBA.ps1" "${SourceDir}/${folder}" "$app"
+
+    Write-Host "========================="
 }

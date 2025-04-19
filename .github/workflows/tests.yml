@@ -27,6 +27,7 @@ jobs:
           name: "VBA-Enabled-Documents"
           path: "./tests/out/*"
           if-no-files-found: warn
+      # TODO: Check if better method to visualize the screenshots: https://github.com/actions/upload-artifact/issues/14
       - name: "Upload Screenshots"
         # Run this step even if the build failed
         if: success() || failure()
