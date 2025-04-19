@@ -217,6 +217,10 @@ Write-Host "Module folder path: $moduleFolder"
 $classModulesFolder = GetAbsPath -path "$folderName/Class Modules" -basePath $currentDir
 Write-Host "Class Modules folder path: $classModulesFolder"
 
+# Define the forms folder path
+$formsFolder = GetAbsPath -path "$folderName/Forms" -basePath $currentDir
+Write-Host "Forms folder path: $formsFolder"
+
 #Check if the module folder does not exist create an empty one
 if (-not (Test-Path $moduleFolder)) {
     Write-Host "Module folder not found: $moduleFolder"
@@ -229,6 +233,13 @@ if (-not (Test-Path $classModulesFolder)) {
     Write-Host "Class Modules folder not found: $classModulesFolder"
     New-Item -ItemType Directory -Path $classModulesFolder -Force | Out-Null
     Write-Host "Created class modules folder: $classModulesFolder"
+}
+
+#Check if the forms folder does not exist create an empty one
+if (-not (Test-Path $formsFolder)) {
+    Write-Host "Forms folder not found: $formsFolder"
+    New-Item -ItemType Directory -Path $formsFolder -Force | Out-Null
+    Write-Host "Created forms folder: $formsFolder"
 }
 
 # Import class modules first (.cls files)
@@ -264,6 +275,42 @@ $clsFiles | ForEach-Object {
         Write-Host "Successfully imported class module $($_.Name)"
     } catch {
         Write-Host "Failed to import class module $($_.Name): $($_.Exception.Message)"
+    }
+}
+
+# Import form modules (.frm files)
+$frmFiles = Get-ChildItem -Path $formsFolder -Filter *.frm -ErrorAction SilentlyContinue
+Write-Host "Found $($frmFiles.Count) .frm files to import"
+
+# Loop through each form file
+$frmFiles | ForEach-Object {
+    Write-Host "Importing form $($_.Name)..."
+    try {
+        $vbProject = $doc.VBProject
+        # Check if the VBProject is accessible
+        if ($null -eq $vbProject) {
+            Write-Host "VBProject is not accessible. Attempting to re-open the application..."
+            $officeApp.Quit()
+            Start-Sleep -Seconds 2
+            $officeApp = New-Object -ComObject $officeApp.Application
+            $doc = $officeApp.Workbooks.Open($outputFilePath)
+            
+            $vbProject = $doc.VBProject
+
+            if ($null -eq $vbProject) {
+                Write-Host "VBProject is still not accessible after re-opening the application."
+                # Throw an error to trigger the catch block
+                exit 1
+            } else {
+                Write-Host "VBProject is now accessible after re-opening the application."
+            }
+        }
+
+        $vbProject.VBComponents.Import($_.FullName)
+        
+        Write-Host "Successfully imported form $($_.Name)"
+    } catch {
+        Write-Host "Failed to import form $($_.Name): $($_.Exception.Message)"
     }
 }
 
