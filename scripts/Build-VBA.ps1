@@ -108,22 +108,69 @@ if ($officeAppName -eq "Excel") {
     $doc = $officeApp.Presentations.Open($outputFilePath)
 } elseif ($officeAppName -eq "Access") {
     try {
-        if ($officeApp.CurrentDb -ne $null) {
-            $officeApp.CloseCurrentDatabase()
+        # Check if the file exists and is accessible
+        if (-not (Test-Path $outputFilePath)) {
+            Write-Host "🔴 Error: Access database file not found: $outputFilePath"
+            exit 1
         }
         
-        # Set default database properties
-        $officeApp.DefaultOpenExclusive = $false  # Initially try shared mode
+        # Close any existing database
+        try {
+            if ($null -ne $officeApp.CurrentDb) {
+                $officeApp.CloseCurrentDatabase()
+                Start-Sleep -Seconds 1
+            }
+        } catch {
+            # Ignore errors when checking CurrentDb - it may throw if no database is open
+        }
         
-        # First attempt
+        # First attempt - normal open
+        Write-Host "Attempting to open Access database in shared mode..."
         $doc = $officeApp.OpenCurrentDatabase($outputFilePath)
         
-        # If we got $null or can't modify VBA project, try exclusive mode
-        if ($null -eq $doc -or $null -eq $doc.VBProject) {
-            $officeApp.CloseCurrentDatabase()
-            Start-Sleep -Seconds 1
-            $officeApp.DefaultOpenExclusive = $true  # Try exclusive mode
-            $doc = $officeApp.OpenCurrentDatabase($outputFilePath)
+        # Check if VBA project is accessible
+        $vbaAccessible = $false
+        try {
+            if ($null -ne $doc -and $null -ne $doc.VBProject) {
+                $vbaAccessible = $true
+                Write-Host "VBA Project accessible in shared mode"
+            }
+        } catch {
+            Write-Host "Cannot access VBA Project in shared mode: $($_.Exception.Message)"
+        }
+        
+        # If VBA project isn't accessible, try reopening with different flags
+        if (-not $vbaAccessible) {
+            Write-Host "Attempting to reopen database with exclusive access..."
+            try {
+                $officeApp.CloseCurrentDatabase()
+                Start-Sleep -Seconds 1
+                
+                # Try a different approach for exclusive access
+                # Some versions of Access use different methods
+                
+                # For newer Access versions
+                $officeApp.OpenCurrentDatabase($outputFilePath, $true) # $true = exclusive mode
+                $doc = $officeApp.CurrentDb
+            } catch {
+                Write-Host "Failed with exclusive flag: $($_.Exception.Message)"
+                
+                # For older Access versions - one last attempt
+                try {
+                    $officeApp.Quit()
+                    Start-Sleep -Seconds 2
+                    $officeApp = New-Object -ComObject "Access.Application"
+                    $officeApp.Visible = $true
+                    
+                    # Open in exclusive mode
+                    # Use a slightly different technique as a last resort
+                    $officeApp.OpenCurrentDatabase($outputFilePath, $true)
+                    $doc = $officeApp.CurrentDb
+                } catch {
+                    Write-Host "🔴 Error: Failed to open the database after multiple attempts: $($_.Exception.Message)"
+                    exit 1
+                }
+            }
         }
     }
     catch {

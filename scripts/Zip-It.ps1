@@ -7,11 +7,9 @@ if (-not $folderName) {
     exit 1
 }
 
-$sourceDir = $folderName.Substring(0, $folderName.LastIndexOf('/'))
-
-$filNameWithExtension = $folderName.Substring($folderName.LastIndexOf('/') + 1)
-$fileName = $filNameWithExtension.Substring(0, $filNameWithExtension.LastIndexOf('.'))
-$fileExtension = $filNameWithExtension.Substring($filNameWithExtension.LastIndexOf('.') + 1)
+$fileName = GetDirName $folderName
+$fileNameNoExt = $fileName.Substring(0, $fileName.LastIndexOf('.'))
+$fileExtension = $fileName.Substring($fileName.LastIndexOf('.') + 1)
 
 Write-Host "Staring the compression process..."
 
@@ -20,7 +18,7 @@ Write-Host "Current directory: $currentDir"
 
 # Define the source folder and the output zip file
 $sourceFolder = Join-Path -Path $currentDir -ChildPath "$folderName/XMLsource/"
-$outputZipFile = Join-Path -Path $currentDir -ChildPath "$folderName/Skeleton/$fileName.zip"
+$outputZipFile = Join-Path -Path $currentDir -ChildPath "$folderName/Skeleton/$fileNameNoExt.zip"
 
 # Path to the 7-Zip executable
 $sevenZipPath = "7z"  # Assumes 7-Zip is in the system PATH. Adjust if necessary.
@@ -73,7 +71,7 @@ Write-Host "Current directory after change: $(Get-Location)"
 
 # Compress the files and folders using 7-Zip
 Write-Host "Compressing files in $sourceFolder to $absoluteDestinationFolder..."
-& $sevenZipPath a -tzip "$absoluteDestinationFolder/$fileName.zip" "*" | Out-Null
+& $sevenZipPath a -tzip "$absoluteDestinationFolder/$fileNameNoExt.zip" "*" | Out-Null
 
 # Check if the compression was successful using $LASTEXITCODE
 if ($LASTEXITCODE -ne 0) {

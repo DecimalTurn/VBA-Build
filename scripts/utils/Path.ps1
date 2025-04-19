@@ -56,6 +56,15 @@ function GetFileNameWithoutExtension {
     return $temp.Substring(0, $temp.LastIndexOf('.'))
 }
 
+function GetFileExtension {
+    param (
+        [string]$path
+    )
+    $path = NormalizeFilePath($path)
+    $temp = GetFileNameFromPath($path) 
+    return $temp.Substring($temp.LastIndexOf('.') + 1)
+}
+
 function GetAbsPath {
     param (
         [string]$path,

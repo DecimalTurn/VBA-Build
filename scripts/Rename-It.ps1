@@ -14,16 +14,23 @@ if (-not $ext) {
     exit 1
 }
 
-$sourceDir = $folderName.Substring(0, $folderName.LastIndexOf('/'))
+# Import utility functions
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+. "$scriptPath/utils/Path.ps1"
 
-$filNameWithExtension = $folderName.Substring($folderName.LastIndexOf('/') + 1)
-$fileName = $filNameWithExtension.Substring(0, $filNameWithExtension.LastIndexOf('.'))
-$fileExtension = $filNameWithExtension.Substring($filNameWithExtension.LastIndexOf('.') + 1)
+$rootSrcDir = DirUp (NormalizeDirPath $folderName)
+
+$currentDir = (Get-Location).Path + "/"
+$srcDir = GetAbsPath -path $folderName -basePath $currentDir
+
+$fileName = GetDirName $srcDir
+$fileNameNoExt = $fileName.Substring(0, $fileName.LastIndexOf('.'))
+$fileExtension = $fileName.Substring($fileName.LastIndexOf('.') + 1)
 
 # Create a copy of the zip/document file in the $folderName/Skeleton folder at the top level
-$copySource = "$folderName/Skeleton/$fileName.$ext"
-$renameDestinationFolder = "$sourceDir/out"
-$renameDestinationFilePath = "$renameDestinationFolder/$fileName.$fileExtension"
+$copySource = "$folderName/Skeleton/$fileNameNoExt.$ext"
+$renameDestinationFolder = "$rootSrcDir/out"
+$renameDestinationFilePath = "$renameDestinationFolder/$fileNameNoExt.$fileExtension"
 
 # Create rename destination folder if it doesn't exist
 if (-not (Test-Path $renameDestinationFolder)) {
