@@ -8,22 +8,6 @@ Sub Demo()
 End Sub
 
 'This code will be called via COM to test if the VBA import was successful
-Sub WriteToFile()
-    Dim filePath As String
-    Dim fileNum As Integer
-    
-    ' Specify the path to the text file
-    filePath = ThisDocument.Path & "\WordDocument.txt"
-    
-    ' Get a free file number
-    fileNum = FreeFile
-    
-    ' Open the file for output
-    Open filePath For Output As #fileNum
-    
-    ' Write some text to the file
-    Print #fileNum, "Hello, World!"
-    
-    ' Close the file
-    Close #fileNum
+Public Sub WriteToFile()
+    Class1.ExecuteWrite()
 End Sub

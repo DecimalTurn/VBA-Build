@@ -121,15 +121,61 @@ if ($null -eq $doc) {
 }
 
 # Define the module folder path
-
 $moduleFolder = GetAbsPath -path "$folderName/Modules" -basePath $currentDir
 Write-Host "Module folder path: $moduleFolder"
+
+# Define the class modules folder path
+$classModulesFolder = GetAbsPath -path "$folderName/Class Modules" -basePath $currentDir
+Write-Host "Class Modules folder path: $classModulesFolder"
 
 #Check if the module folder does not exist create an empty one
 if (-not (Test-Path $moduleFolder)) {
     Write-Host "Module folder not found: $moduleFolder"
     New-Item -ItemType Directory -Path $moduleFolder -Force | Out-Null
     Write-Host "Created module folder: $moduleFolder"
+}
+
+#Check if the class modules folder does not exist create an empty one
+if (-not (Test-Path $classModulesFolder)) {
+    Write-Host "Class Modules folder not found: $classModulesFolder"
+    New-Item -ItemType Directory -Path $classModulesFolder -Force | Out-Null
+    Write-Host "Created class modules folder: $classModulesFolder"
+}
+
+# Import class modules first (.cls files)
+$clsFiles = Get-ChildItem -Path $classModulesFolder -Filter *.cls -ErrorAction SilentlyContinue
+Write-Host "Found $($clsFiles.Count) .cls files to import"
+
+# Loop through each class module file
+$clsFiles | ForEach-Object {
+    Write-Host "Importing class module $($_.Name)..."
+    try {
+        $vbProject = $doc.VBProject
+        # Check if the VBProject is accessible
+        if ($null -eq $vbProject) {
+            Write-Host "VBProject is not accessible. Attempting to re-open the application..."
+            $officeApp.Quit()
+            Start-Sleep -Seconds 2
+            $officeApp = New-Object -ComObject $officeApp.Application
+            $doc = $officeApp.Workbooks.Open($outputFilePath)
+            
+            $vbProject = $doc.VBProject
+
+            if ($null -eq $vbProject) {
+                Write-Host "VBProject is still not accessible after re-opening the application."
+                # Throw an error to trigger the catch block
+                exit 1
+            } else {
+                Write-Host "VBProject is now accessible after re-opening the application."
+            }
+        }
+
+        $vbProject.VBComponents.Import($_.FullName)
+        
+        Write-Host "Successfully imported class module $($_.Name)"
+    } catch {
+        Write-Host "Failed to import class module $($_.Name): $($_.Exception.Message)"
+    }
 }
 
 # First check if there are any .bas files
