@@ -20,6 +20,10 @@ function Take-Screenshot {
     # Copy the screen to the bitmap
     $graphic.CopyFromScreen($bounds.X, $bounds.Y, 0, 0, $bounds.Size)
 
+    # Replace {{timestamp}} with the current date and time
+    $timestamp = (Get-Date).ToString("yyyyMMdd_HHmmss")
+    $OutputPath = $OutputPath -replace "{{timestamp}}", $timestamp
+
     # Save the bitmap as a file
     $bitmap.Save($OutputPath)
 

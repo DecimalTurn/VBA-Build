@@ -4,6 +4,11 @@
 # and imports all .bas files from a specified folder into the document.
 # It then saves and closes the document, and cleans up the COM objects.
 
+# Load utiliies
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+. "$scriptPath/utils/Screenshot.ps1"
+
+# Args
 $folderName = $args[0]
 $officeAppName = $args[1]
 
@@ -35,6 +40,12 @@ $outputFilePath = $outputDir + $fileName
 if (-not (Test-Path $outputFilePath)) {
     Write-Host "Error: Output file not found: $outputFilePath"
     exit 1
+}
+
+$screenshotDir = (DirUp $outputDir) + "screenshots/"
+if (-not (Test-Path $screenshotDir)) {
+    New-Item -ItemType Directory -Path $screenshotDir -Force | Out-Null
+    Write-Host "Created screenshot directory: $screenshotDir"
 }
 
 # Allows to double-ckeck if the VBOM is enabled
@@ -105,6 +116,7 @@ if ($officeAppName -eq "Excel") {
 # Check if the document was opened successfully
 if ($null -eq $doc) {
     Write-Host "Error: Failed to open the document: $outputFilePath"
+    Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
     exit 1
 }
 
@@ -156,15 +168,7 @@ $basFiles | ForEach-Object {
     }
 }
 
-# Take a screenshot of the Office application
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-. "$scriptPath/utils/Screenshot.ps1"
-$screenshotDir = (DirUp $outputDir) + "screenshots/"
-if (-not (Test-Path $screenshotDir)) {
-    New-Item -ItemType Directory -Path $screenshotDir -Force | Out-Null
-    Write-Host "Created screenshot directory: $screenshotDir"
-}
-Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}.png"
+Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
 
 # Save the document
 Write-Host "Saving document..."
@@ -179,6 +183,7 @@ try {
     }
 } catch {
     Write-Host "Warning: Could not save document: $($_.Exception.Message)"
+    Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
     
     # Alternative approach for PowerPoint if SaveAs fails
     if ($officeAppName -eq "PowerPoint") {
@@ -210,8 +215,38 @@ try {
             exit 0
         } catch {
             Write-Host "Error: Alternative save method also failed: $($_.Exception.Message)"
+            Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
         }
     }
+}
+
+# Call the WriteToFile macro to check if the module was imported correctly
+try {
+    $macroName = "WriteToFile"
+    $officeApp.Run($macroName)
+    
+    # Check if the file was created successfully with the correct content
+    $outputFile = "$outputDir/$fileNameNoExt.txt"
+    if (Test-Path $outputFile) {
+        $fileContent = Get-Content -Path $outputFile
+        if ($fileContent -eq "Hello, World") {
+            Write-Host "🟢 Macro executed successfully and file content is correct."
+        } else {
+            Write-Host "🟡 Warning: Macro executed, but file content is incorrect."
+        }
+
+        # Delete the output file after checking
+        Remove-Item -Path $outputFile -Force
+        Write-Host "Output test file deleted successfully."
+
+    } else {
+        Write-Host "🟡 Warning: Macro executed, but output file was not created."
+    }
+
+} catch {
+    Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
+    Write-Host "🟡 Warning: Could not execute macro ${macroName}: $($_.Exception.Message)"
+    
 }
 
 # Close the document
