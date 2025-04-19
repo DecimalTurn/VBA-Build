@@ -192,6 +192,7 @@ try {
             $tempPath = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.pptm'
             Write-Host "Attempting to save to temporary location: $tempPath"
             $doc.SaveAs($tempPath)
+            Write-Host "Temporary file saved successfully at: $tempPath"
             
             # Close the document and application
             $doc.Close()
@@ -205,8 +206,8 @@ try {
             Start-Sleep -Seconds 2
             
             # Copy the temp file to the intended destination
-            Copy-Item -Path $tempPath -Destination $outputFilePath -Force
-            Remove-Item -Path $tempPath -Force
+                Copy-Item -Path $tempPath -Destination $outputFilePath -Force
+                Remove-Item -Path $tempPath -Force
             
             Write-Host "Document saved using alternative method"
             
@@ -222,9 +223,21 @@ try {
 
 # Call the WriteToFile macro to check if the module was imported correctly
 try {
-    $macroName = "WriteToFile"
-    $officeApp.Run($macroName)
     
+    $vbaModule = $doc.VBProject.VBComponents.Item(1)
+    if ($null -eq $vbaModule) {
+        Write-Host "Error: No VBA module found in the document."
+        Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
+        exit 1
+    }
+    Write-Host "VBA module found: $($vbaModule.Name)"
+
+    $macroName = "WriteToFile"
+    Write-Host "Macro to execute: $macroName"
+    Write-Host "Application state before macro execution: Type=$($officeApp.GetType().FullName)"
+    $officeApp.Run($macroName)
+    Write-Host "Macro finished"
+
     # Check if the file was created successfully with the correct content
     $outputFile = "$outputDir/$fileNameNoExt.txt"
     if (Test-Path $outputFile) {

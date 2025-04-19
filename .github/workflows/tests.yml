@@ -29,6 +29,7 @@ jobs:
           if-no-files-found: warn
       # TODO: Check if better method to visualize the screenshots: https://github.com/actions/upload-artifact/issues/14
       - name: "Take exiting screenshot"
+        if: always()
         run: |
           . "./scripts/utils/Screenshot.ps1"
           Take-Screenshot -OutputPath ${{ github.workspace }}/tests/screenshots/ExitScreenshot.png
