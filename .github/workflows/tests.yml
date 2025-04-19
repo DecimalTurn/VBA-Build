@@ -28,9 +28,14 @@ jobs:
           path: "./tests/out/*"
           if-no-files-found: warn
       # TODO: Check if better method to visualize the screenshots: https://github.com/actions/upload-artifact/issues/14
+      - name: "Take exiting screenshot"
+        run: |
+          . "./scripts/utils/Screenshot.ps1"
+          Take-Screenshot -OutputPath ${{ github.workspace }}/tests/screenshots/ExitScreenshot.png
+        shell: pwsh
       - name: "Upload Screenshots"
         # Run this step even if the build failed
-        if: success() || failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: "Screenshots"

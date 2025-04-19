@@ -229,10 +229,10 @@ try {
     $outputFile = "$outputDir/$fileNameNoExt.txt"
     if (Test-Path $outputFile) {
         $fileContent = Get-Content -Path $outputFile
-        if ($fileContent -eq "Hello, World") {
+        if ($fileContent -eq "Hello, World!") {
             Write-Host "🟢 Macro executed successfully and file content is correct."
         } else {
-            Write-Host "🟡 Warning: Macro executed, but file content is incorrect."
+            Write-Host "🟡 Warning: Macro executed, but file content is incorrect.: $fileContent"
         }
 
         # Delete the output file after checking
