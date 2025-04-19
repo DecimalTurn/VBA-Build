@@ -13,12 +13,12 @@ $folderName = $args[0]
 $officeAppName = $args[1]
 
 if (-not $folderName) {
-    Write-Host "Error: No folder name specified. Usage: Build-VBA.ps1 <FolderName>"
+    Write-Host "🔴 Error: No folder name specified. Usage: Build-VBA.ps1 <FolderName>"
     exit 1
 }
 
 if (-not $officeAppName) {
-    Write-Host "Error: No Office application specified. Usage: Build-VBA.ps1 <FolderName> <officeAppName>"
+    Write-Host "🔴 Error: No Office application specified. Usage: Build-VBA.ps1 <FolderName> <officeAppName>"
     exit 1
 }
 
@@ -27,18 +27,24 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/utils/Path.ps1"
 
 $currentDir = (Get-Location).Path + "/"
-$srcDir = GetAbsPath -path $folderName -basePath $currentDir
+Write-Host "Current directory: $currentDir"
 
-$fileName = GetDirName $srcDir
+$vbaSrcDir = GetAbsPath -path $folderName -basePath $currentDir
+Write-Host "Using source directory: $vbaSrcDir"
+
+$fileName = GetDirName $vbaSrcDir
 $fileNameNoExt = $fileName.Substring(0, $fileName.LastIndexOf('.'))
 $fileExtension = $fileName.Substring($fileName.LastIndexOf('.') + 1)
 
-$outputDir = (DirUp $srcDir) + "out/"
+$outputDir = (DirUp $vbaSrcDir) + "out/"
+
+Write-Host "Output directory: $outputDir"
+
 $outputFilePath = $outputDir + $fileName
 
 # Make sure the output file already exists
 if (-not (Test-Path $outputFilePath)) {
-    Write-Host "Error: Output file not found: $outputFilePath"
+    Write-Host "🔴 Error: Output file not found: $outputFilePath"
     exit 1
 }
 
@@ -83,7 +89,7 @@ function Test-VBOMAccess {
 
 # Check if VBOM access is enabled before attempting imports
 if (-not (Test-VBOMAccess -officeAppName $officeAppName)) {
-    Write-Host "Error: VBOM access is not enabled. Please enable it in the Trust Center settings."
+    Write-Host "🔴 Error: VBOM access is not enabled. Please enable it in the Trust Center settings."
     exit 1
 }
 
@@ -95,7 +101,7 @@ $officeApp.Visible = $true
 
 # Check if the application instance was created successfully
 if ($null -eq $officeApp) {
-    Write-Host "Error: Failed to create COM object for $officeApp"
+    Write-Host "🔴 Error: Failed to create COM object for $officeApp"
     exit 1
 }
 

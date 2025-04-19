@@ -86,17 +86,22 @@ Write-TimedMessage "Minimizing Administrator window" -StartNewStep
 Minimize-Window "Administrator: C:\actions"
 Write-TimedMessage "Window minimized"
 
-
+$originalSrcDir = $srcDir
 
 foreach ($folder in $folders) {
+    Write-Host "========================="
+    # Reset the source directory to the original value
+    $srcDir = $originalSrcDir
+
     Write-TimedMessage "Processing folder: $folder" -StartNewStep
     $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
+    Write-Host "File extension: $fileExtension"
     $app = Get-OfficeApp -FileExtension $fileExtension
 
     $ext = ""
     if ($app -ne "Access") {
         $ext = "zip"
-        Write-TimedMessage "Creating Zip file and renaming to Office document target" -StartNewStep
+        Write-TimedMessage "Creating Zip file and renaming to Office document target with path ${srcDir}${folder}" -StartNewStep
         . "$PSScriptRoot/scripts/Zip-It.ps1" "${srcDir}${folder}"
         Write-TimedMessage "Zip file created"
     }
@@ -116,6 +121,8 @@ foreach ($folder in $folders) {
     $buildVbaScriptPath = "$PSScriptRoot/scripts/Build-VBA.ps1"
     $success = Invoke-ScriptWithTimeout -ScriptPath $buildVbaScriptPath -Arguments @("${srcDir}${folder}", "$app") -TimeoutSeconds 30
 
+    Write-Host "srcDir: ${srcDir}"
+
     if (-not $success) {
         Write-TimedMessage "🔴 Build-VBA.ps1 execution timed out or failed for ${folder}. Continuing with next file..."
         
@@ -129,5 +136,4 @@ foreach ($folder in $folders) {
     }
 
     Write-TimedMessage "🟢 Completed processing folder: $folder"
-    Write-Host "========================="
 }

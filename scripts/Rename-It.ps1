@@ -29,8 +29,8 @@ $fileExtension = $fileName.Substring($fileName.LastIndexOf('.') + 1)
 
 # Create a copy of the zip/document file in the $folderName/Skeleton folder at the top level
 $copySource = "$folderName/Skeleton/$fileNameNoExt.$ext"
-$renameDestinationFolder = "$rootSrcDir/out"
-$renameDestinationFilePath = "$renameDestinationFolder/$fileNameNoExt.$fileExtension"
+$renameDestinationFolder = $rootSrcDir + "out/"
+$renameDestinationFilePath = "$renameDestinationFolder$fileNameNoExt.$fileExtension"
 
 # Create rename destination folder if it doesn't exist
 if (-not (Test-Path $renameDestinationFolder)) {
