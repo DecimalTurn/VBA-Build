@@ -164,7 +164,7 @@ if (-not (Test-Path $screenshotDir)) {
     New-Item -ItemType Directory -Path $screenshotDir -Force | Out-Null
     Write-Host "Created screenshot directory: $screenshotDir"
 }
-Take-Screenshot -OutputPath "${$screenshotDir}Screenshot_${fileNameNoExt}.png"
+Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}.png"
 
 # Save the document
 $doc.Save()
