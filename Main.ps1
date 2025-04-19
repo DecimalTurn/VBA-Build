@@ -16,7 +16,9 @@ $mainTimer = [System.Diagnostics.Stopwatch]::StartNew()
 $stepTimer = [System.Diagnostics.Stopwatch]::StartNew()
 
 Write-TimedMessage "Current directory: $(pwd)" -StartNewStep
-Write-TimedMessage "Using source directory: $SourceDir"
+Write-Host "Using source directory: $SourceDir"
+$SourceDir = Normalize-Path $SourceDir
+Write-TimedMessage "Normalized source directory: $SourceDir" 
 
 # Read name of the folders under the specified source directory into an array
 $folders = Get-ChildItem -Path "$PSScriptRoot/$SourceDir" -Directory | Select-Object -ExpandProperty Name
@@ -92,24 +94,24 @@ foreach ($folder in $folders) {
     if ($app -ne "Access") {
         $ext = "zip"
         Write-TimedMessage "Creating Zip file and renaming to Office document target" -StartNewStep
-        . "$PSScriptRoot/scripts/Zip-It.ps1" "${SourceDir}/${folder}"
+        . "$PSScriptRoot/scripts/Zip-It.ps1" "${SourceDir}${folder}"
         Write-TimedMessage "Zip file created"
     }
     else {
         $ext = "accdb"
         Write-TimedMessage "Copying folder and content to Skeleton folder" -StartNewStep
-        Copy-Item -Path "${SourceDir}/${folder}/DBSource" -Destination "${SourceDir}/${folder}/Skeleton" -Recurse -Force
+        Copy-Item -Path "${SourceDir}${folder}/DBSource" -Destination "${SourceDir}${folder}/Skeleton" -Recurse -Force
         Write-TimedMessage "Folder copied"
     }
 
     Write-TimedMessage "Copying and renaming file to correct name" -StartNewStep
-    . "$PSScriptRoot/scripts/Rename-It.ps1" "${SourceDir}/${folder}" "$ext"
+    . "$PSScriptRoot/scripts/Rename-It.ps1" "${SourceDir}${folder}" "$ext"
     Write-TimedMessage "File renamed"
 
     Write-TimedMessage "Importing VBA code into Office document" -StartNewStep
     # Replace the direct Build-VBA call with the timeout version
     $buildVbaScriptPath = "$PSScriptRoot/scripts/Build-VBA.ps1"
-    $success = Invoke-ScriptWithTimeout -ScriptPath $buildVbaScriptPath -Arguments @("${SourceDir}/${folder}", "$app") -TimeoutSeconds 60
+    $success = Invoke-ScriptWithTimeout -ScriptPath $buildVbaScriptPath -Arguments @("${SourceDir}${folder}", "$app") -TimeoutSeconds 30
 
     if (-not $success) {
         Write-TimedMessage "🔴 Build-VBA.ps1 execution timed out or failed for ${folder}. Continuing with next file..."
@@ -123,6 +125,6 @@ foreach ($folder in $folders) {
         Take-Screenshot -OutputPath "${screenshotDir}${app}_{{timestamp}}.png"
     }
 
-    Write-TimedMessage "Completed processing folder: $folder"
+    Write-TimedMessage "🟢 Completed processing folder: $folder"
     Write-Host "========================="
 }
