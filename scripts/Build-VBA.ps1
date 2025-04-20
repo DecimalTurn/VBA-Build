@@ -243,8 +243,6 @@ $basFiles | ForEach-Object {
 . "$scriptPath/utils/Minimize.ps1"
 Minimize-Window "Choose a theme"
 
-Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
-
 # Save the document
 Write-Host "Saving document..."
 try {
