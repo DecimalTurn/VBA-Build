@@ -7,7 +7,8 @@ Write-Host "Current directory: $(pwd)"
 Write-Host "Using source directory: $SourceDir"
 
 # Read name of the folders under the specified source directory into an array
-$folders = Get-ChildItem -Path "$PSScriptRoot/$SourceDir" -Directory | Select-Object -ExpandProperty Name
+$CurrentWorkingDir = Get-Location
+$folders = Get-ChildItem -Path "$CurrentWorkingDir/$SourceDir" -Directory | Select-Object -ExpandProperty Name
 Write-Host "Folders in ${SourceDir}: $folders"
 
 # Check if the folders array is empty

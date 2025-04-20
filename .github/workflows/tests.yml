@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - dev[0-9]*
+      - dev*
 
 permissions:
   id-token: write
