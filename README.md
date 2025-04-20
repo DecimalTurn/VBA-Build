@@ -18,11 +18,17 @@ The main script is contained in `Main.ps1` and will perform the following action
     - Renames the ZIP file with the appropriate Office extension (e.g., .xlsm)
 - VBA Integration:
     - Ensures no Office applications are running that could interfere
-    - Enables the Visual Basic Object Model (VBOM) in the registry of the Windows GitHub Worker
-    - Opens the Office file and imports all VBA modules (.bas files) from your source directory
+    - Enables the Visual Basic Object Model (VBOM) and general macro permissions in the registry of the Windows GitHub Worker
+    - Opens the Office file and imports all modules (.bas), Forms (.frm) and Class Modules (.cls) from your source directory
 - Output:
     - Saves the final document with embedded VBA code
-    - Places the resulting file in your repository (Note that you'll need to commit that file or create a build artifact to preserve it)
+    - Uploads the resulting documents as build artifacts
+
+## Support File Format
+
+* Excel (.xlsm, .xlam, .xlsb)
+* Word (.docm)
+* PowerPoint (.pptm)
 
 ## Why? 
 
@@ -37,8 +43,7 @@ This could be used to:
 ## What's next?
 
 Depending on the reaction of the community, I might add support for:
-
-- Access, Word and PowerPoint
+- Workbook, Worksheet and Document (Word) Objects
 - Signature of the VBA Project (to facilitate distribution)
-- Forms and Classes
 - More complex file structure using [vba-block](https://www.vba-blocks.com/manifest/) configuration file (manifest file)
+- Microsoft Access file formats
