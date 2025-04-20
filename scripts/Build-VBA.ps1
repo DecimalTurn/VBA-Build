@@ -4,10 +4,6 @@
 # and imports all .bas files from a specified folder into the document.
 # It then saves and closes the document, and cleans up the COM objects.
 
-# Load utiliies
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-. "$scriptPath/utils/Screenshot.ps1"
-
 # Args
 $folderName = $args[0]
 $officeAppName = $args[1]
@@ -22,9 +18,7 @@ if (-not $officeAppName) {
     exit 1
 }
 
-# Import utility functions
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-. "$scriptPath/utils/Path.ps1"
+Write-Host "$mainSourceDir: $$mainSourceDir"
 
 $currentDir = (Get-Location).Path + "/"
 Write-Host "Current directory: $currentDir"

@@ -8,28 +8,33 @@ param(
 $mainTimer = [System.Diagnostics.Stopwatch]::StartNew()
 $stepTimer = [System.Diagnostics.Stopwatch]::StartNew()
 
-# Import utility functions
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-. "$scriptPath/scripts/utils/Minimize.ps1" # To get better screenshots we need to minimize the "Administrator" CMD window
-. "$scriptPath/scripts/utils/TimedMessage.ps1"
-. "$scriptPath/scripts/utils/Invoke.ps1" # Function to invoke a script with a timeout
-. "$scriptPath/scripts/utils/Screenshot.ps1"
-. "$scriptPath/scripts/utils/Path.ps1"
+Set-Variable -Name MainScriptDir -Value "$PSScriptRoot" -Option Constant
 
+# Import utility functions
+. "$MainScriptDir/scripts/utils/Invoke.ps1" # Function to invoke a script with a timeout
+. "$MainScriptDir/scripts/utils/Minimize.ps1" # To get better screenshots we need to minimize the "Administrator" CMD window
+. "$MainScriptDir/scripts/utils/Path.ps1"
+. "$MainScriptDir/scripts/utils/Screenshot.ps1"
+. "$MainScriptDir/scripts/utils/TimedMessage.ps1"
 
 Write-TimedMessage "Current directory: $(pwd)" -StartNewStep
-$srcDir = NormalizeDirPath $SourceDir
-Write-Host "Using source directory: $srcDir"
-$srcDir = GetAbsPath -path $srcDir -basePath $PSScriptRoot
-Write-TimedMessage "Normalized source abs directory: $srcDir"
+# This directory contains the directories associated with the office documents
+$mainSourceDir = NormalizeDirPath ((Resolve-Path $SourceDir).Path)
+Write-Host "Main Source Dir: $mainSourceDir"
+
+# Check if the source dir was resolved correctly
+if (-not (Test-Path $mainSourceDir)) {
+    Write-Host "🔴 Error: Source directory not found: $mainSourceDir"
+    exit 1
+}
 
 # Read name of the folders under the specified source directory into an array
-$folders = Get-ChildItem -Path "$srcDir" -Directory | Select-Object -ExpandProperty Name
-Write-TimedMessage "Folders in ${srcDir}: $folders" -StartNewStep
+$fileDirNames = Get-ChildItem -Path "$mainSourceDir" -Directory | Select-Object -ExpandProperty Name
+Write-TimedMessage "Folders in ${mainSourceDir}: $fileDirNames" -StartNewStep
 
 # Check if the folders array is empty
-if ($folders.Count -eq 0) {
-    Write-TimedMessage "No folders found in ${srcDir}. Exiting script." -StartNewStep
+if ($fileDirNames.Count -eq 0) {
+    Write-TimedMessage "No folders found in ${mainSourceDir}. Exiting script." -StartNewStep
     exit 1
 }
 
@@ -52,16 +57,16 @@ function Get-OfficeApp {
 
 # Create a list of Office applications that are needed based on the file extensions of the folders
 Write-TimedMessage "Identifying required Office applications" -StartNewStep
-foreach ($folder in $folders) {
-    $fileExtension = GetFileExtension $folder
-    $app = Get-OfficeApp -FileExtension $fileExtension
+foreach ($fileDirName in $fileDirNames) {
+    $fileExt = GetFileExtension $fileDirName
+    $app = Get-OfficeApp -FileExtension $fileExt
     
     if ($app) {
         if ($officeApps -notcontains $app) {
             $officeApps += $app
         }
     } else {
-        Write-TimedMessage "Unknown file extension: $fileExtension. Skipping..."
+        Write-TimedMessage "Unknown file extension: $fileExt. Skipping..."
         continue
     }
 }
@@ -71,6 +76,7 @@ Write-TimedMessage "Required Office applications: $officeApps"
 Write-TimedMessage "Open and close Office applications" -StartNewStep
 . "$PSScriptRoot/scripts/Open-Close-Office.ps1" $officeApps
 Write-TimedMessage "Completed opening and closing Office applications"
+Take-Screenshot -OutputPath "${mainSourceDir}screenshots/AllOfficeAppClosed_{{timestamp}}.png"
 Write-Host "========================="
 
 # Enable VBOM for each Office application
@@ -86,47 +92,44 @@ Write-TimedMessage "Minimizing Administrator window" -StartNewStep
 Minimize-Window "Administrator: C:\actions"
 Write-TimedMessage "Window minimized"
 
-$originalSrcDir = $srcDir
-
-foreach ($folder in $folders) {
+foreach ($fileDirName in $fileDirNames) {
     Write-Host "========================="
     # Reset the source directory to the original value
-    $srcDir = $originalSrcDir
 
-    Write-TimedMessage "Processing folder: $folder" -StartNewStep
-    $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
-    Write-Host "File extension: $fileExtension"
-    $app = Get-OfficeApp -FileExtension $fileExtension
+    Write-TimedMessage "Processing folder: $fileDirName" -StartNewStep
+    $fileExt = $folder.Substring($folder.LastIndexOf('.') + 1)
+    Write-Host "File extension: $fileExt"
+    $app = Get-OfficeApp -FileExtension $fileExt
 
     $ext = ""
     if ($app -ne "Access") {
         $ext = "zip"
-        Write-TimedMessage "Creating Zip file and renaming to Office document target with path ${srcDir}${folder}" -StartNewStep
-        . "$PSScriptRoot/scripts/Zip-It.ps1" "${srcDir}${folder}"
+        Write-TimedMessage "Creating Zip file and renaming to Office document target with path ${mainSourceDir}${fileDirName}" -StartNewStep
+        & "$PSScriptRoot/scripts/Zip-It.ps1" "${mainSourceDir}${fileDirName}"
         Write-TimedMessage "Zip file created"
     }
     else {
         $ext = "accdb"
-        Write-TimedMessage "Copying folder and content to Skeleton folder" -StartNewStep
-        Copy-Item -Path "${srcDir}${folder}/DBSource" -Destination "${srcDir}${folder}/Skeleton" -Recurse -Force
-        Write-TimedMessage "Folder copied"
+        Write-TimedMessage "Copying directory and content to Skeleton directory" -StartNewStep
+        Copy-Item -Path "${mainSourceDir}${fileDirName}/DBSource" -Destination "${mainSourceDir}${fileDirName}/Skeleton" -Recurse -Force
+        Write-TimedMessage "Directory copied"
     }
 
     Write-TimedMessage "Copying and renaming file to correct name" -StartNewStep
-    . "$PSScriptRoot/scripts/Rename-It.ps1" "${srcDir}${folder}" "$ext"
+    & "$PSScriptRoot/scripts/Rename-It.ps1" "${mainSourceDir}${folder}" "$ext"
     Write-TimedMessage "File renamed"
 
     Write-TimedMessage "Importing VBA code into Office document" -StartNewStep
     # Replace the direct Build-VBA call with the timeout version
     $buildVbaScriptPath = "$PSScriptRoot/scripts/Build-VBA.ps1"
-    $success = Invoke-ScriptWithTimeout -ScriptPath $buildVbaScriptPath -Arguments @("${srcDir}${folder}", "$app") -TimeoutSeconds 30
+    $success = Invoke-ScriptWithTimeout -ScriptPath $buildVbaScriptPath -Arguments @("${mainSourceDir}${folder}", "$app") -TimeoutSeconds 30
 
-    Write-Host "srcDir: ${srcDir}"
+    Write-Host "mainSourceDir: ${mainSourceDir}"
 
     if (-not $success) {
         Write-TimedMessage "🔴 Build-VBA.ps1 execution timed out or failed for ${folder}. Continuing with next file..."
         
-        $screenshotDir = ${srcDir} + "screenshots/"
+        $screenshotDir = ${mainSourceDir} + "screenshots/"
         if (-not (Test-Path $screenshotDir)) {
             New-Item -ItemType Directory -Path $screenshotDir -Force | Out-Null
             Write-Host "Created screenshot directory: $screenshotDir"
