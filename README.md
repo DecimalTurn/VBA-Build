@@ -24,7 +24,7 @@ The main script is contained in `Main.ps1` and will perform the following action
     - Saves the final document with embedded VBA code
     - Uploads the resulting documents as build artifacts
 
-## Support File Format
+## Supported File Formats
 
 * Excel (.xlsm, .xlam, .xlsb)
 * Word (.docm)
