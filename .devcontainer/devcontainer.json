@@ -5,7 +5,21 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/base:alpine-3.20",
 	"features": {
-		"ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {}
+		"ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {
+			"corepack": true,
+			"pnpmVersion": "latest"
+		},
+		"ghcr.io/devcontainers/features/powershell:1": {
+			"version": "7.4"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.powershell",
+				"github.vscode-github-actions"
+			]
+		}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

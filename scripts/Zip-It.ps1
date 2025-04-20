@@ -1,4 +1,17 @@
-# This script uses 7-Zip to compress files and folders in the src/XMLsource directory into a zip file named skeleton.zip.
+# This script uses 7-Zip to compress files and folders in the ${folderName}/XMLsource directory into a zip file.
+
+# Read the name of the folder from the argument passed to the script
+$folderName = $args[0]
+if (-not $folderName) {
+    Write-Host "Error: No folder name specified. Usage: Zip-It.ps1 <FolderName>"
+    exit 1
+}
+
+$sourceDir = $folderName.Substring(0, $folderName.LastIndexOf('/'))
+
+$filNameWithExtension = $folderName.Substring($folderName.LastIndexOf('/') + 1)
+$fileName = $filNameWithExtension.Substring(0, $filNameWithExtension.LastIndexOf('.'))
+$fileExtension = $filNameWithExtension.Substring($filNameWithExtension.LastIndexOf('.') + 1)
 
 Write-Host "Staring the compression process..."
 
@@ -6,8 +19,8 @@ $currentDir = Get-Location
 Write-Host "Current directory: $currentDir"
 
 # Define the source folder and the output zip file
-$sourceFolder = Join-Path -Path $currentDir -ChildPath "src/skeleton.xlsm/XMLsource/"
-$outputZipFile = Join-Path -Path $currentDir -ChildPath "src/skeleton.xlsm/XMLoutput/skeleton.zip"
+$sourceFolder = Join-Path -Path $currentDir -ChildPath "$folderName/XMLsource/"
+$outputZipFile = Join-Path -Path $currentDir -ChildPath "$folderName/Skeleton/$fileName.zip"
 
 # Path to the 7-Zip executable
 $sevenZipPath = "7z"  # Assumes 7-Zip is in the system PATH. Adjust if necessary.
@@ -60,7 +73,7 @@ Write-Host "Current directory after change: $(Get-Location)"
 
 # Compress the files and folders using 7-Zip
 Write-Host "Compressing files in $sourceFolder to $absoluteDestinationFolder..."
-& $sevenZipPath a -tzip "$absoluteDestinationFolder/skeleton.zip" "*" | Out-Null
+& $sevenZipPath a -tzip "$absoluteDestinationFolder/$fileName.zip" "*" | Out-Null
 
 # Check if the compression was successful using $LASTEXITCODE
 if ($LASTEXITCODE -ne 0) {
@@ -76,26 +89,3 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Compression completed successfully. Zip file created at: $absoluteDestinationFolder"
-
-
-# Create a copy of the zip file in the src/skeleton.xlsm/XMLoutput folder at the /src level
-$copySource = "src/skeleton.xlsm/XMLoutput/skeleton.zip"
-$renameDestination = "./skeleton.xlsm"
-
-# Delete the destination file if it exists
-if (Test-Path $renameDestination) {
-    Write-Host "Deleting existing file: $renameDestination"
-    Remove-Item -Path $renameDestination -Force
-}
-
-# Copy and rename the file in one step
-Write-Host "Copying and renaming $copySource to $renameDestination..."
-Copy-Item -Path $copySource -Destination $renameDestination -Force
-
-# Verify if the file exists after the copy
-if (-not (Test-Path $renameDestination)) {
-    Write-Host "Error: File not found after copy: $renameDestination"
-    exit 1
-}
-
-Write-Host "File successfully copied and renamed to: $renameDestination"
