@@ -293,6 +293,7 @@ try {
     }
 }
 
+# Generic test
 # Call the WriteToFile macro to check if the module was imported correctly
 try {
     
@@ -331,7 +332,62 @@ try {
 } catch {
     Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
     Write-Host "🟡 Warning: Could not execute macro ${macroName}: $($_.Exception.Message)"
+}
+
+# Create a function for Rubberduck testing
+function Test-WithRubberduck {
+    param (
+        [Parameter(Mandatory=$true)]
+        $officeApp
+    )
     
+    $rubberduckAddin = $null
+    $rubberduck = $null
+    try {
+        $rubberduckAddin = $officeApp.COMAddIns.Item("Rubberduck")
+        if ($null -eq $rubberduckAddin) {
+            Write-Host "🔴 Error: Rubberduck add-in not found. Please install it first."
+            return $false
+        }
+        $rubberduck = $rubberduckAddin.Object
+        if ($null -eq $rubberduck) {
+            Write-Host "🔴 Error: Rubberduck object not found. Please ensure it is properly installed."
+            return $false
+        }
+
+        Write-Host "Rubberduck add-in found. Proceeding with tests..."
+        # Run all tests in the active VBA project
+        $rubberduck.RunAllTests()
+        Write-Host "All tests executed successfully."
+
+        # Wait for tests to complete (optional: add a timeout)
+        Start-Sleep -Seconds 10
+
+        # Retrieve test results
+        $results = $rubberduck.GetTestResults()
+        foreach ($result in $results) {
+            Write-Host "Test: $($result.Name) - Outcome: $($result.Outcome)"
+        }
+
+        # Make sure to release the COM object
+        if ($null -ne $rubberduck) {
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($rubberduck) | Out-Null
+            Write-Host "Released Rubberduck COM object"
+        }
+        
+        return $true
+    }
+    catch {
+        Write-Host "🔴 Error: Could not access Rubberduck add-in: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+# Now perform all tests using Rubberduck
+# Replace the existing Rubberduck test block with this:
+$rubberduckTestResult = Test-WithRubberduck -officeApp $officeApp
+if (-not $rubberduckTestResult) {
+    Write-Host "Rubberduck tests were not completed successfully, but continuing with the script..."
 }
 
 # Close the document

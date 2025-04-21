@@ -21,7 +21,7 @@ jobs:
         uses: ./
         with:
           sourceDir: "./tests"
-        timeout-minutes: 10
+        timeout-minutes: 15
       - name: "Display Chocolatey logs in case of Office install failure"
         if: failure() && steps.build_vba.outcome == 'failure'
         run: |

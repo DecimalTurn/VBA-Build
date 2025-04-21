@@ -54,6 +54,9 @@ Write-Host "Open and close Office applications"
 . "$PSScriptRoot/scripts/Open-Close-Office.ps1" $officeApps
 Write-Host "========================="
 
+Write-Host "Install Rubberduck"
+. "$PSScriptRoot/scripts/Install-Rubberduck-VBA.ps1" $officeApps
+
 # Enable VBOM for each Office application
 foreach ($app in $officeApps) {
     Write-Host "Enabling VBOM for $app"
