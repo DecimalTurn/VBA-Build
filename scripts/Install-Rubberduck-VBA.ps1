@@ -156,12 +156,6 @@ $installerArgs = "/SILENT /NORESTART /SUPPRESSMSGBOXES /LOG=$env:TEMP\Rubberduck
 Start-Process -FilePath $tempInstallerPath -ArgumentList $installerArgs -Wait
 # The -Wait parameter ensures that the script waits for the installation to complete before proceeding.
 
-# Output logs to the console
-# The script uses the Get-Content cmdlet to read the installation log file and display its contents in the console.
-# This can help troubleshoot any issues that may arise during the installation process.
-# Note: Use -Tail 500 to limit the output to the last 500 lines of the log file.
-Get-Content -Path "$env:TEMP\RubberduckInstall.log" | Out-Host
-
 # Verify that Rubberduck was successfully installed by checking registry entries
 function Test-RubberduckInstalled {
     $addinProgId = "Rubberduck.Extension"
@@ -224,6 +218,12 @@ $rubberduckInstalled = Test-RubberduckInstalled
 if (-not $rubberduckInstalled) {
     Write-Host "⚠️ Warning: Rubberduck installation could not be verified. Office addins may not function correctly."
     Write-Host "Please check the installation log for more details or try reinstalling manually."
+
+    # Output logs to the console
+    # The script uses the Get-Content cmdlet to read the installation log file and display its contents in the console.
+    # This can help troubleshoot any issues that may arise during the installation process.
+    # Note: Use -Tail 500 to limit the output to the last 500 lines of the log file.
+    Get-Content -Path "$env:TEMP\RubberduckInstall.log" | Out-Host
 } else {
     Write-Host "🎉 Rubberduck installed successfully and is ready to use!"
 }

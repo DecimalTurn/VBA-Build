@@ -56,8 +56,10 @@ Write-Host "========================="
 
 Write-Host "Install Rubberduck"
 . "$PSScriptRoot/scripts/Install-Rubberduck-VBA.ps1" $officeApps
+Write-Host "========================="
 
 # Enable VBOM for each Office application
+Write-Host "Enabling VBOM for Office applications"
 foreach ($app in $officeApps) {
     Write-Host "Enabling VBOM for $app"
     . "$PSScriptRoot/scripts/Enable-VBOM.ps1" $app
