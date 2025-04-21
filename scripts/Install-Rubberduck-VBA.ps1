@@ -155,3 +155,75 @@ Invoke-WebRequest -Uri $rubberduckUrl -OutFile $tempInstallerPath
 $installerArgs = "/SILENT /NORESTART /SUPPRESSMSGBOXES /LOG=$env:TEMP\RubberduckInstall.log"
 Start-Process -FilePath $tempInstallerPath -ArgumentList $installerArgs -Wait
 # The -Wait parameter ensures that the script waits for the installation to complete before proceeding.
+
+# Output logs to the console
+# The script uses the Get-Content cmdlet to read the installation log file and display its contents in the console.
+# This can help troubleshoot any issues that may arise during the installation process.
+# Note: Use -Tail 500 to limit the output to the last 500 lines of the log file.
+Get-Content -Path "$env:TEMP\RubberduckInstall.log" | Out-Host
+
+# Verify that Rubberduck was successfully installed by checking registry entries
+function Test-RubberduckInstalled {
+    $addinProgId = "Rubberduck.Extension"
+    $addinCLSID = "8D052AD8-BBD2-4C59-8DEC-F697CA1F8A66"
+    $isInstalled = $false
+    
+    # Check for registry keys in current user hive
+    if (Test-Path "HKCU:\Software\Microsoft\VBA\VBE\6.0\Addins\$addinProgId") {
+        Write-Host "✅ Rubberduck add-in registration found in HKCU VBA\VBE registry."
+        $isInstalled = $true
+    }
+    
+    # For 64-bit systems, check additional registry locations
+    if ([Environment]::Is64BitOperatingSystem) {
+        if (Test-Path "HKCU:\Software\Microsoft\VBA\VBE\6.0\Addins64\$addinProgId") {
+            Write-Host "✅ Rubberduck add-in registration found in HKCU VBA\VBE Addins64 registry."
+            $isInstalled = $true
+        }
+        
+        # Check for the VB6 addin registration
+        if (Test-Path "HKCU:\Software\Microsoft\Visual Basic\6.0\Addins\$addinProgId") {
+            Write-Host "✅ Rubberduck add-in registration found in HKCU Visual Basic registry."
+            $isInstalled = $true
+        }
+    }
+    
+    # Check for the COM class registration
+    if (Test-Path "HKCR:\CLSID\{$addinCLSID}" -ErrorAction SilentlyContinue) {
+        Write-Host "✅ Rubberduck COM class registration found."
+        $isInstalled = $true
+    }
+    
+    # Check if the DLL file was installed
+    $commonAppDataPath = [System.Environment]::GetFolderPath("CommonApplicationData")
+    $localAppDataPath = [System.Environment]::GetFolderPath("LocalApplicationData")
+    
+    $possiblePaths = @(
+        "$commonAppDataPath\Rubberduck\Rubberduck.dll",
+        "$localAppDataPath\Rubberduck\Rubberduck.dll"
+    )
+    
+    foreach ($path in $possiblePaths) {
+        if (Test-Path $path) {
+            Write-Host "✅ Rubberduck DLL found at: $path"
+            $isInstalled = $true
+            break
+        }
+    }
+    
+    if (-not $isInstalled) {
+        Write-Host "❌ Rubberduck installation verification failed. No registry entries or DLL files found."
+        return $false
+    }
+    
+    Write-Host "✅ Rubberduck installation verification completed successfully."
+    return $true
+}
+
+$rubberduckInstalled = Test-RubberduckInstalled
+if (-not $rubberduckInstalled) {
+    Write-Host "⚠️ Warning: Rubberduck installation could not be verified. Office addins may not function correctly."
+    Write-Host "Please check the installation log for more details or try reinstalling manually."
+} else {
+    Write-Host "🎉 Rubberduck installed successfully and is ready to use!"
+}
