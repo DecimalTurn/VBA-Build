@@ -247,17 +247,67 @@ Set-Location $tempDir
 try {
     # Clone the repository
     Write-Host "Cloning Rubberduck CLI branch..."
-    $gitCloneResult = git clone "https://github.com/DecimalTurn/Rubberduck.git" -b cli
+    $gitCloneResult = git clone "https://github.com/DecimalTurn/Rubberduck.git" -b cli --depth 1
     if ($LASTEXITCODE -ne 0) {
         throw "Git clone failed with exit code $LASTEXITCODE"
     }
-    
-    # Build the solution
+
     Set-Location (Join-Path $tempDir "Rubberduck")
-    Write-Host "Building Rubberduck solution..."
-    $buildResult = dotnet build -c Debug
-    if ($LASTEXITCODE -ne 0) {
-        throw "Dotnet build failed with exit code $LASTEXITCODE"
+
+
+    # Build the solution
+    Write-Host "🦆 Building Rubberduck solution..."
+    
+    # Download VS 2017 Build Tools installer
+    $vsInstallerUrl = "https://aka.ms/vs/15/release/vs_buildtools.exe"
+    $vsInstallerPath = Join-Path $env:TEMP "vs_buildtools.exe"
+    Invoke-WebRequest -Uri $vsInstallerUrl -OutFile $vsInstallerPath
+    
+    # Install VS 2017 Build Tools with necessary components
+    Write-Host "Installing Visual Studio 2017 Build Tools..."
+    
+    # Using Start-Process with Wait for better process handling
+    $vsInstallerArgs = @(
+        "--quiet", 
+        "--wait", 
+        "--norestart", 
+        "--nocache", 
+        "--installPath", "C:\BuildTools", 
+        "--add", "Microsoft.VisualStudio.Workload.MSBuildTools", 
+        "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+        "--add", "Microsoft.Net.Component.4.6.2.TargetingPack",
+        "--add", "Microsoft.Net.Component.4.6.2.SDK",
+        "--add", "Microsoft.VisualStudio.Component.NuGet.BuildTools"
+    )
+    
+    $vsProcess = Start-Process -FilePath $vsInstallerPath -ArgumentList $vsInstallerArgs -PassThru -Wait -NoNewWindow
+    if ($vsProcess.ExitCode -ne 0) {
+        Write-Warning "VS2017 Build Tools installer exited with code $($vsProcess.ExitCode)"
+    }
+    
+    # Set MSBuild path directly to installation location
+    $msbuildPath = "C:\BuildTools\MSBuild\15.0\Bin\MSBuild.exe"
+    
+    # Verify installation
+    if (Test-Path $msbuildPath) {
+        Write-Host "✅ Visual Studio 2017 Build Tools installed successfully at C:\BuildTools"
+    } else {
+        throw "Visual Studio 2017 Build Tools installation failed. MSBuild not found at $msbuildPath"
+    }
+
+    # Add the MSBuild path to the top system PATH environment variable
+    $env:Path = "$msbuildPath;$env:Path"
+
+    Write-Host "Restoring NuGet packages..."
+    nuget restore RubberduckMeta.sln -MSBuildPath (Split-Path $msbuildPath)
+    nuget restore Rubberduck.sln -MSBuildPath (Split-Path $msbuildPath)
+
+    if (Test-Path $msbuildPath) {
+        Write-Host "Using MSBuild from: $msbuildPath"
+        & $msbuildPath "Rubberduck.sln" /p:Configuration=Debug #/verbosity:minimal
+        if ($LASTEXITCODE -ne 0) {
+            throw "MSBuild failed with exit code $LASTEXITCODE"
+        }
     }
     
     # Copy the binaries
@@ -280,6 +330,7 @@ try {
 catch {
     Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Installation of Rubberduck CLI failed." -ForegroundColor Red
+    exit 1
 }
 finally {
     # Return to original directory

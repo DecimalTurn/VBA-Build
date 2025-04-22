@@ -336,7 +336,6 @@ try {
 
 . "$scriptPath/utils/Tests-Rubberduck-VBA.ps1"
 
-
 # Now perform all tests using Rubberduck
 # Replace the existing Rubberduck test block with this:
 $rubberduckTestResult = Test-WithRubberduck -officeApp $officeApp
