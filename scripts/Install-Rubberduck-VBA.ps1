@@ -260,9 +260,66 @@ try {
 
     # Build the solution
     Write-Host "Building Rubberduck solution..."
-    dotnet build "Rubberduck.sln" -c Debug -verbosity:minimal
-    if ($LASTEXITCODE -ne 0) {
-        throw "Dotnet build failed with exit code $LASTEXITCODE"
+
+    # Try to find MSBuild 15.0
+    $msbuildPath = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\MSBuild\15.0\Bin\MSBuild.exe"
+    if (-not (Test-Path $msbuildPath)) {
+        $msbuildPath = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\MSBuild\15.0\Bin\MSBuild.exe"
+    }
+    if (-not (Test-Path $msbuildPath)) {
+        $msbuildPath = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
+    }
+    if (-not (Test-Path $msbuildPath)) {
+        $msbuildPath = "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\MSBuild.exe"
+    }
+
+    if (-not (Test-Path $msbuildPath)) {
+        # Try to use vswhere to find MSBuild
+        Write-Host "Trying to locate MSBuild using vswhere..."
+        try {
+            $vswherePath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            if (Test-Path $vswherePath) {
+                $vsPath = & $vswherePath -version "[15.0,16.0)" -products * -requires Microsoft.Component.MSBuild -property installationPath
+                if ($vsPath) {
+                    $msbuildPath = Join-Path $vsPath "MSBuild\15.0\Bin\MSBuild.exe"
+                }
+            }
+        }
+        catch {
+            Write-Host "Error using vswhere: $_"
+        }
+    }
+
+    if (Test-Path $msbuildPath) {
+        Write-Host "Using MSBuild from: $msbuildPath"
+        & $msbuildPath "Rubberduck.sln" /p:Configuration=Debug /verbosity:minimal
+        if ($LASTEXITCODE -ne 0) {
+            throw "MSBuild failed with exit code $LASTEXITCODE"
+        }
+    }
+    else {
+        Write-Host "MSBuild 15.0 not found. Attempting to install Visual Studio Build Tools..."
+        
+        # Download VS Build Tools installer
+        $vsInstallerUrl = "https://aka.ms/vs/15/release/vs_buildtools.exe"
+        $vsInstallerPath = Join-Path $env:TEMP "vs_buildtools.exe"
+        Invoke-WebRequest -Uri $vsInstallerUrl -OutFile $vsInstallerPath
+        
+        # Install Build Tools with MSBuild
+        Write-Host "Installing Visual Studio Build Tools with MSBuild component..."
+        & $vsInstallerPath --quiet --wait --norestart --nocache --installPath "C:\BuildTools" --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64
+        
+        $msbuildPath = "C:\BuildTools\MSBuild\15.0\Bin\MSBuild.exe"
+        if (Test-Path $msbuildPath) {
+            Write-Host "Using newly installed MSBuild from: $msbuildPath"
+            & $msbuildPath "Rubberduck.sln" /p:Configuration=Debug /verbosity:minimal
+            if ($LASTEXITCODE -ne 0) {
+                throw "MSBuild failed with exit code $LASTEXITCODE"
+            }
+        }
+        else {
+            throw "Could not find or install MSBuild 15.0. Build cannot continue."
+        }
     }
     
     # Copy the binaries
