@@ -1,5 +1,5 @@
 # # Summary:
-# # This PowerShell installs Rubberduck for the VBE and runs all tests in the active VBA project.
+# # This PowerShell installs Rubberduck for the VBE.
 # 
 
 # Installer location: https://github.com/rubberduck-vba/Rubberduck/releases/latest

@@ -1,0 +1,14 @@
+#Create a simple workflow to take a screenshot of the Windows worker's desktop
+name: Rubberduck
+on:
+  workflow_dispatch:
+jobs:   
+  screenshot:
+    runs-on: windows-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Install Rubberduck"
+        run: |
+          # Install Rubberduck
+          . "./scripts/Install-Rubberduck-VBA.ps1"
