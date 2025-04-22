@@ -251,11 +251,16 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Git clone failed with exit code $LASTEXITCODE"
     }
-    
-    # Build the solution
+
     Set-Location (Join-Path $tempDir "Rubberduck")
+
+    Write-Host "Restoring NuGet packages..."
+    nuget restore RubberduckMeta.sln
+    nuget restore Rubberduck.sln
+
+    # Build the solution
     Write-Host "Building Rubberduck solution..."
-    dotnet build "Rubberduck.sln" -c Debug -v detailed
+    dotnet build "Rubberduck.sln" -c Debug -verbosity:minimal
     if ($LASTEXITCODE -ne 0) {
         throw "Dotnet build failed with exit code $LASTEXITCODE"
     }
