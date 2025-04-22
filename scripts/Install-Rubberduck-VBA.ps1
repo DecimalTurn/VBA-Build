@@ -225,5 +225,69 @@ if (-not $rubberduckInstalled) {
     # Note: Use -Tail 500 to limit the output to the last 500 lines of the log file.
     Get-Content -Path "$env:TEMP\RubberduckInstall.log" | Out-Host
 } else {
-    Write-Host "🎉 Rubberduck installed successfully and is ready to use!"
+    Write-Host "🎉 Rubberduck installed successfully and is (almost) ready to use!"
+}
+
+# Now we need to clone https://github.com/DecimalTurn/Rubberduck/tree/cli build the solution and 
+# copy the content of the bin folder to the Rubberduck installation folder (C:\Users\<username>\AppData\Local\Rubberduck)
+
+$currentDir = Get-Location
+$tempDir = Join-Path $env:TEMP "RubberduckCLIBuild"
+$installFolder = "$env:LOCALAPPDATA\Rubberduck"
+
+# Remove any existing temp directory
+if (Test-Path $tempDir) {
+    Remove-Item -Path $tempDir -Recurse -Force
+}
+
+# Create temp directory and navigate to it
+New-Item -Path $tempDir -ItemType Directory -Force | Out-Null
+Set-Location $tempDir
+
+try {
+    # Clone the repository
+    Write-Host "Cloning Rubberduck CLI branch..."
+    $gitCloneResult = git clone "https://github.com/DecimalTurn/Rubberduck.git" -b cli
+    if ($LASTEXITCODE -ne 0) {
+        throw "Git clone failed with exit code $LASTEXITCODE"
+    }
+    
+    # Build the solution
+    Set-Location (Join-Path $tempDir "Rubberduck")
+    Write-Host "Building Rubberduck solution..."
+    $buildResult = dotnet build -c Debug
+    if ($LASTEXITCODE -ne 0) {
+        throw "Dotnet build failed with exit code $LASTEXITCODE"
+    }
+    
+    # Copy the binaries
+    $binFolder = Join-Path (Get-Location) "Rubberduck.Core\bin\Debug\net462"
+    if (-not (Test-Path $binFolder)) {
+        throw "Build output folder not found: $binFolder"
+    }
+    
+    if (-not (Test-Path $installFolder)) {
+        New-Item -Path $installFolder -ItemType Directory -Force | Out-Null
+    }
+
+    Write-Host "Copying binaries to $installFolder..."
+    Copy-Item -Path "$binFolder\*" -Destination $installFolder -Recurse -Force
+    
+    # Verify files were copied
+    $fileCount = (Get-ChildItem -Path $installFolder -File).Count
+    Write-Host "✅ Rubberduck binaries copied to installation folder. $fileCount files transferred."
+} 
+catch {
+    Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Installation of Rubberduck CLI failed." -ForegroundColor Red
+}
+finally {
+    # Return to original directory
+    Set-Location $currentDir
+    
+    # Clean up temp directory
+    if (Test-Path $tempDir) {
+        Write-Host "Cleaning up temporary files..."
+        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
