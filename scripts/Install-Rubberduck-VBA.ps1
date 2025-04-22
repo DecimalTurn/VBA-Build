@@ -247,7 +247,7 @@ Set-Location $tempDir
 try {
     # Clone the repository
     Write-Host "Cloning Rubberduck CLI branch..."
-    $gitCloneResult = git clone "https://github.com/DecimalTurn/Rubberduck.git" -b cli
+    $gitCloneResult = git clone "https://github.com/DecimalTurn/Rubberduck.git" -b cli --depth 1
     if ($LASTEXITCODE -ne 0) {
         throw "Git clone failed with exit code $LASTEXITCODE"
     }
@@ -255,7 +255,7 @@ try {
     # Build the solution
     Set-Location (Join-Path $tempDir "Rubberduck")
     Write-Host "Building Rubberduck solution..."
-    $buildResult = dotnet build -c Debug
+    dotnet build "Rubberduck.sln" -c Debug -v detailed
     if ($LASTEXITCODE -ne 0) {
         throw "Dotnet build failed with exit code $LASTEXITCODE"
     }
