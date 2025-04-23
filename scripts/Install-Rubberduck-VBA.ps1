@@ -161,6 +161,7 @@ function Test-RubberduckInstalled {
     $addinProgId = "Rubberduck.Extension"
     $addinCLSID = "8D052AD8-BBD2-4C59-8DEC-F697CA1F8A66"
     $isInstalled = $false
+    $installPath = ""
     
     # Check for registry keys in current user hive
     if (Test-Path "HKCU:\Software\Microsoft\VBA\VBE\6.0\Addins\$addinProgId") {
@@ -201,21 +202,22 @@ function Test-RubberduckInstalled {
         if (Test-Path $path) {
             Write-Host "✅ Rubberduck DLL found at: $path"
             $isInstalled = $true
+            $installPath = Split-Path -Parent $path  # Get the directory containing the DLL
             break
         }
     }
     
     if (-not $isInstalled) {
         Write-Host "❌ Rubberduck installation verification failed. No registry entries or DLL files found."
-        return $false
+        return ""  # Return empty string if not found
     }
     
     Write-Host "✅ Rubberduck installation verification completed successfully."
-    return $true
+    return $installPath  # Return the path where Rubberduck.dll was found
 }
 
-$rubberduckInstalled = Test-RubberduckInstalled
-if (-not $rubberduckInstalled) {
+$rubberduckInstallPath = Test-RubberduckInstalled
+if (-not $rubberduckInstallPath) {
     Write-Host "⚠️ Warning: Rubberduck installation could not be verified. Office addins may not function correctly."
     Write-Host "Please check the installation log for more details or try reinstalling manually."
 
@@ -230,14 +232,13 @@ if (-not $rubberduckInstalled) {
 
 # Now we need to download the artifacts from the latest build in https://github.com/DecimalTurn/Rubberduck/actions/runs/14609505761/artifacts/2990874874
 # The artifacts are stored in a zip file and we need to extract them to the installation folder.
-# The installation folder is usually located in the following path:  C:\ProgramData\Rubberduck\
 
 Write-Host "⏳ Downloading and installing additional components..."
 
 # Define the artifact URL and download location
 $artifactUrl = "https://github.com/DecimalTurn/Rubberduck/actions/runs/14609505761/artifacts/2990874874"
 $artifactZipPath = "$env:TEMP\RubberduckArtifacts.zip"
-$rubberduckInstallDir = "C:\ProgramData\Rubberduck"
+$rubberduckInstallDir = $rubberduckInstallPath  # Use the path returned by Test-RubberduckInstalled
 
 # Function to check if we have GitHub CLI installed
 function Test-GitHubCLI {
@@ -251,6 +252,13 @@ function Test-GitHubCLI {
 
 # Download the artifact
 try {
+    # If we don't have an install path, try default location
+    if (-not $rubberduckInstallDir) {
+        $commonAppDataPath = [System.Environment]::GetFolderPath("CommonApplicationData")
+        $rubberduckInstallDir = "$commonAppDataPath\Rubberduck"
+        Write-Host "🔍 Using default installation directory: $rubberduckInstallDir"
+    }
+    
     # Check if GitHub CLI is available
     if (Test-GitHubCLI) {
         # Use GitHub CLI to download the artifact
