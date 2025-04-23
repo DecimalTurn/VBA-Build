@@ -258,13 +258,13 @@ try {
     # Build the solution
     Write-Host "🦆 Building Rubberduck solution..."
     
-    # Download VS 2017 Build Tools installer
-    $vsInstallerUrl = "https://aka.ms/vs/15/release/vs_buildtools.exe"
-    $vsInstallerPath = Join-Path $env:TEMP "vs_buildtools.exe"
+    # Download VS 2019 Build Tools installer
+    $vsInstallerUrl = "https://aka.ms/vs/16/release/vs_buildtools.exe"
+    $vsInstallerPath = Join-Path $env:TEMP "vs2019_buildtools.exe"
     Invoke-WebRequest -Uri $vsInstallerUrl -OutFile $vsInstallerPath
     
-    # Install VS 2017 Build Tools with necessary components
-    Write-Host "Installing Visual Studio 2017 Build Tools..."
+    # Install VS 2019 Build Tools with necessary components
+    Write-Host "Installing Visual Studio 2019 Build Tools..."
     
     # Using Start-Process with Wait for better process handling
     $vsInstallerArgs = @(
@@ -272,9 +272,9 @@ try {
         "--wait", 
         "--norestart", 
         "--nocache", 
-        "--installPath", "C:\BuildTools", 
+        "--installPath", "C:\BuildTools2019", 
         "--add", "Microsoft.VisualStudio.Workload.MSBuildTools", 
-        "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+        "--add", "Microsoft.VisualStudio.Workload.NetCoreBuildTools",
         "--add", "Microsoft.Net.Component.4.6.2.TargetingPack",
         "--add", "Microsoft.Net.Component.4.6.2.SDK",
         "--add", "Microsoft.VisualStudio.Component.NuGet.BuildTools"
@@ -282,17 +282,17 @@ try {
     
     $vsProcess = Start-Process -FilePath $vsInstallerPath -ArgumentList $vsInstallerArgs -PassThru -Wait -NoNewWindow
     if ($vsProcess.ExitCode -ne 0) {
-        Write-Warning "VS2017 Build Tools installer exited with code $($vsProcess.ExitCode)"
+        Write-Warning "VS2019 Build Tools installer exited with code $($vsProcess.ExitCode)"
     }
     
     # Set MSBuild path directly to installation location
-    $msbuildPath = "C:\BuildTools\MSBuild\15.0\Bin\MSBuild.exe"
+    $msbuildPath = "C:\BuildTools2019\MSBuild\Current\Bin\MSBuild.exe"
     
     # Verify installation
     if (Test-Path $msbuildPath) {
-        Write-Host "✅ Visual Studio 2017 Build Tools installed successfully at C:\BuildTools"
+        Write-Host "✅ Visual Studio 2019 Build Tools installed successfully at C:\BuildTools2019"
     } else {
-        throw "Visual Studio 2017 Build Tools installation failed. MSBuild not found at $msbuildPath"
+        throw "Visual Studio 2019 Build Tools installation failed. MSBuild not found at $msbuildPath"
     }
 
     # Add the MSBuild path to the top system PATH environment variable
@@ -311,7 +311,7 @@ try {
     }
     
     # Copy the binaries
-    $binFolder = Join-Path (Get-Location) "Rubberduck.Core\bin\Debug\net462"
+    $binFolder = Join-Path (Get-Location) "Rubberduck.Main\bin\Debug\net462"
     if (-not (Test-Path $binFolder)) {
         throw "Build output folder not found: $binFolder"
     }
