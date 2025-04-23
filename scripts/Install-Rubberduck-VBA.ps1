@@ -284,7 +284,8 @@ try {
             "--add", "Microsoft.VisualStudio.Workload.MSBuildTools", 
             "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
             "--add", "Microsoft.Net.Component.4.6.2.TargetingPack",
-            "--add", "Microsoft.Net.Component.4.6.2.SDK"
+            "--add", "Microsoft.Net.Component.4.6.2.SDK",
+            "--add", "Microsoft.VisualStudio.Component.NuGet.BuildTools" 
         )
         
         $vsProcess = Start-Process -FilePath $vsInstallerPath -ArgumentList $vsInstallerArgs -PassThru -Wait -NoNewWindow
