@@ -387,10 +387,4 @@ try {
     Write-Host "Warning: Error releasing application COM object: $($_.Exception.Message)"
 }
 
-# Force garbage collection to ensure COM objects are properly released
-[System.GC]::Collect()
-[System.GC]::WaitForPendingFinalizers()
-
-# Clean up variables
-Remove-Variable -Name doc, officeApp -ErrorAction SilentlyContinue
 Write-Host "VBA import completed successfully."

@@ -237,10 +237,10 @@ $artifactUrl = "https://github.com/DecimalTurn/Rubberduck/releases/download/v2.5
 $artifactZipPath = "$env:TEMP\RubberduckArtifacts.zip"
 $rubberduckInstallDir = $rubberduckInstallPath  # Use the path returned by Test-RubberduckInstalled
 
-Write-Host "📥 Downloading artifacts from $artifactUrl..."
+Write-Host "📥 Downloading artifacts from $artifactUrl"
 Invoke-WebRequest -Uri $artifactUrl -OutFile $artifactZipPath
 
-Write-Host "📦 Extracting artifacts to $rubberduckInstallDir..."
+Write-Host "📦 Extracting artifacts to $rubberduckInstallDir"
 Expand-Archive -Path $artifactZipPath -DestinationPath $rubberduckInstallDir -Force
 
 Write-Host "🏁 Rubberduck installation and configuration completed."
