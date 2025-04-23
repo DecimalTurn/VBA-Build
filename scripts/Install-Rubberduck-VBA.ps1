@@ -254,9 +254,6 @@ try {
 
     Set-Location (Join-Path $tempDir "Rubberduck")
 
-    Write-Host "Restoring NuGet packages..."
-    nuget restore RubberduckMeta.sln
-    nuget restore Rubberduck.sln
 
     # Build the solution
     Write-Host "🦆 Building Rubberduck solution..."
@@ -300,6 +297,10 @@ try {
 
     # Add the MSBuild path to the top system PATH environment variable
     $env:Path = "$msbuildPath;$env:Path"
+
+    Write-Host "Restoring NuGet packages..."
+    nuget restore RubberduckMeta.sln
+    nuget restore Rubberduck.sln
 
     if (Test-Path $msbuildPath) {
         Write-Host "Using MSBuild from: $msbuildPath"
