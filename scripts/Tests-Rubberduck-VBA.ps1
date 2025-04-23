@@ -8,7 +8,7 @@ function Test-WithRubberduck {
     $rubberduckAddin = $null
     $rubberduck = $null
     try {
-        $rubberduckAddin = $officeApp.COMAddIns.Item("Rubberduck.Extension")
+        $rubberduckAddin = $officeApp.VBE.COMAddIns.Item("Rubberduck.Extension")
         if ($null -eq $rubberduckAddin) {
             Write-Host "🔴 Error: Rubberduck add-in not found. Please install it first."
             return $false
