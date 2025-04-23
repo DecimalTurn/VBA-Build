@@ -299,8 +299,8 @@ try {
     $env:Path = "$msbuildPath;$env:Path"
 
     Write-Host "Restoring NuGet packages..."
-    nuget restore RubberduckMeta.sln
-    nuget restore Rubberduck.sln
+    nuget restore RubberduckMeta.sln -MSBuildPath (Split-Path $msbuildPath)
+    nuget restore Rubberduck.sln -MSBuildPath (Split-Path $msbuildPath)
 
     if (Test-Path $msbuildPath) {
         Write-Host "Using MSBuild from: $msbuildPath"
