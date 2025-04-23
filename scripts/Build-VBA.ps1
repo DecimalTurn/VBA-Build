@@ -334,7 +334,7 @@ try {
     Write-Host "🟡 Warning: Could not execute macro ${macroName}: $($_.Exception.Message)"
 }
 
-. "$scriptPath/utils/Tests-Rubberduck-VBA.ps1"
+. "$scriptPath/Tests-Rubberduck-VBA.ps1"
 
 # Now perform all tests using Rubberduck
 # Replace the existing Rubberduck test block with this:
