@@ -8,20 +8,6 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v4
         
-      - name: "Setup MSBuild"
-        uses: microsoft/setup-msbuild@v1.1
-        with:
-          vs-version: '[15.0,16.0)'
-          msbuild-architecture: x86
-          
-      - name: "Install Visual Studio components"
-        run: |
-          $vsInstallerUrl = "https://aka.ms/vs/15/release/vs_buildtools.exe"
-          $vsInstallerPath = Join-Path $env:TEMP "vs_buildtools.exe"
-          Invoke-WebRequest -Uri $vsInstallerUrl -OutFile $vsInstallerPath
-          & $vsInstallerPath --quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64
-        shell: pwsh
-          
       - name: "Install Rubberduck"
         run: |
           # Install Rubberduck
