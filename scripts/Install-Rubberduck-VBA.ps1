@@ -342,6 +342,7 @@ try {
 catch {
     Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Installation of Rubberduck CLI failed." -ForegroundColor Red
+    exit 1
 }
 finally {
     # Return to original directory
