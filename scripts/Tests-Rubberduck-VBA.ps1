@@ -8,7 +8,7 @@ function Test-WithRubberduck {
     $rubberduckAddin = $null
     $rubberduck = $null
     try {
-        $rubberduckAddin = $officeApp.VBE.COMAddIns.Item("Rubberduck.Extension")
+        $rubberduckAddin = $officeApp.VBE.AddIns("Rubberduck.Extension")
         if ($null -eq $rubberduckAddin) {
             Write-Host "🔴 Error: Rubberduck add-in not found. Please install it first."
             return $false
@@ -24,7 +24,7 @@ function Test-WithRubberduck {
 
         # Run all tests in the active VBA project
         $logPath = "$env:temp\RubberduckTestLog.txt"
-        $rubberduck.RunAllTests($logPath)
+        $rubberduck.RunAllTestsAndGetResults($logPath)
         Write-Host "All tests executed successfully."
 
         # Wait for tests to complete (optional: add a timeout)
@@ -46,6 +46,10 @@ function Test-WithRubberduck {
             Write-Host "🔴 Error: Log file not found. Please check the installation."
             return $false
         }
+
+        # Delete the log file after processing
+        Remove-Item -Path $logPath -ErrorAction SilentlyContinue
+        Write-Host "Log file deleted."
         
         # Make sure to release the COM object
         if ($null -ne $rubberduck) {

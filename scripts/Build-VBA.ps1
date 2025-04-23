@@ -354,7 +354,7 @@ if (-not $rubberduckTestResult) {
 
 # Close the document
 try {
-    $doc.Close()
+    $doc.Close($false) # Close without saving changes
     Write-Host "Document closed successfully"
 } catch {
     Write-Host "Warning: Could not close document: $($_.Exception.Message)"

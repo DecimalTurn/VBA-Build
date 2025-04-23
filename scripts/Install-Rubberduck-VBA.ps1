@@ -233,7 +233,7 @@ if (-not $rubberduckInstallPath) {
 Write-Host "⏳ Downloading and installing CLI-Friendly DLL components..."
 
 # Define the artifact URL and download location
-$artifactUrl = "https://github.com/DecimalTurn/Rubberduck/actions/runs/14609505761/artifacts/2990874874"
+$artifactUrl = "https://github.com/DecimalTurn/Rubberduck/releases/download/v2.5.92.6373-CLI-Friendly/rubberduck-v2.5.92.6373-CLI-Friendly.zip"
 $artifactZipPath = "$env:TEMP\RubberduckArtifacts.zip"
 $rubberduckInstallDir = $rubberduckInstallPath  # Use the path returned by Test-RubberduckInstalled
 
