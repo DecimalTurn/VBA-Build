@@ -246,10 +246,10 @@ Minimize-Window "Choose a theme"
 # Save the document
 Write-Host "Saving document..."
 try {
-    if ($officeAppName -eq "PowerPoint") {
+    if ($officeAppName -eq "PowerPoint" -or $officeAppName -eq "Word") {
         # For PowerPoint, use SaveAs with the same file name to force save
         $doc.SaveAs($outputFilePath)
-        Write-Host "PowerPoint presentation saved using SaveAs method"
+        Write-Host "Document saved using SaveAs method"
     } else {
         $doc.Save()
         Write-Host "Document saved successfully"
