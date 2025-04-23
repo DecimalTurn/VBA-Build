@@ -230,103 +230,18 @@ if (-not $rubberduckInstallPath) {
     Write-Host "🎉 Rubberduck installed successfully and is (almost) ready to use!"
 }
 
-# Now we need to download the artifacts from the latest build in https://github.com/DecimalTurn/Rubberduck/actions/runs/14609505761/artifacts/2990874874
-# The artifacts are stored in a zip file and we need to extract them to the installation folder.
-
-Write-Host "⏳ Downloading and installing additional components..."
+Write-Host "⏳ Downloading and installing CLI-Friendly DLL components..."
 
 # Define the artifact URL and download location
 $artifactUrl = "https://github.com/DecimalTurn/Rubberduck/actions/runs/14609505761/artifacts/2990874874"
 $artifactZipPath = "$env:TEMP\RubberduckArtifacts.zip"
 $rubberduckInstallDir = $rubberduckInstallPath  # Use the path returned by Test-RubberduckInstalled
 
-# Function to check if we have GitHub CLI installed
-function Test-GitHubCLI {
-    try {
-        $null = Get-Command gh -ErrorAction Stop
-        return $true
-    } catch {
-        return $false
-    }
-}
+Write-Host "📥 Downloading artifacts from $artifactUrl..."
+Invoke-WebRequest -Uri $artifactUrl -OutFile $artifactZipPath
 
-# Download the artifact
-try {
-    # If we don't have an install path, try default location
-    if (-not $rubberduckInstallDir) {
-        $commonAppDataPath = [System.Environment]::GetFolderPath("CommonApplicationData")
-        $rubberduckInstallDir = "$commonAppDataPath\Rubberduck"
-        Write-Host "🔍 Using default installation directory: $rubberduckInstallDir"
-    }
-    
-    # Check if GitHub CLI is available
-    if (Test-GitHubCLI) {
-        # Use GitHub CLI to download the artifact
-        Write-Host "📥 Downloading artifact using GitHub CLI..."
-        gh auth status -t > $null 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "⚠️ GitHub CLI not authenticated. Please run 'gh auth login' first."
-            throw "GitHub CLI authentication required"
-        }
-        
-        # Download the artifact using GitHub CLI
-        gh run download 14609505761 -n "Rubberduck-Custom-Extensions" -D "$env:TEMP"
-        $artifactExtractPath = "$env:TEMP\Rubberduck-Custom-Extensions"
-    } else {
-        # Fallback to direct download if GitHub CLI is not available
-        Write-Host "📥 Downloading artifact using direct download..."
-        # Note: This might require authentication token in a real scenario
-        Invoke-WebRequest -Uri $artifactUrl -OutFile $artifactZipPath -Headers @{
-            "Accept" = "application/vnd.github.v3+json"
-            # "Authorization" = "token $env:GITHUB_TOKEN" # Uncomment and set token if needed
-        }
-        
-        # Create temporary directory for extraction
-        $artifactExtractPath = "$env:TEMP\Rubberduck-Custom-Extensions"
-        New-Item -ItemType Directory -Path $artifactExtractPath -Force | Out-Null
-        
-        # Extract the zip file
-        Write-Host "📦 Extracting artifact..."
-        Expand-Archive -Path $artifactZipPath -DestinationPath $artifactExtractPath -Force
-    }
-    
-    # Ensure the installation directory exists
-    if (-not (Test-Path $rubberduckInstallDir)) {
-        Write-Host "⚠️ Rubberduck installation directory not found at expected location: $rubberduckInstallDir"
-        # Try to find the installation directory
-        $commonAppDataPath = [System.Environment]::GetFolderPath("CommonApplicationData")
-        $possiblePath = "$commonAppDataPath\Rubberduck"
-        if (Test-Path $possiblePath) {
-            $rubberduckInstallDir = $possiblePath
-            Write-Host "✅ Found Rubberduck installation directory at: $rubberduckInstallDir"
-        } else {
-            throw "Could not locate Rubberduck installation directory"
-        }
-    }
-    
-    # Copy the files to the installation directory
-    Write-Host "📋 Installing custom extensions to $rubberduckInstallDir..."
-    Get-ChildItem -Path $artifactExtractPath -Recurse -File | ForEach-Object {
-        $destinationPath = Join-Path -Path $rubberduckInstallDir -ChildPath $_.Name
-        Copy-Item -Path $_.FullName -Destination $destinationPath -Force
-        Write-Host "  - Installed: $($_.Name)"
-    }
-    
-    # Clean up temporary files
-    if (Test-Path $artifactZipPath) {
-        Remove-Item -Path $artifactZipPath -Force
-    }
-    if (Test-Path $artifactExtractPath) {
-        Remove-Item -Path $artifactExtractPath -Recurse -Force
-    }
-    
-    Write-Host "✅ Custom extensions installed successfully to Rubberduck installation!"
-    
-} catch {
-    Write-Host "❌ Error installing custom extensions: $($_.Exception.Message)"
-    Write-Host "   You may need to manually download and install the artifacts from:"
-    Write-Host "   $artifactUrl"
-}
+Write-Host "📦 Extracting artifacts to $rubberduckInstallDir..."
+Expand-Archive -Path $artifactZipPath -DestinationPath $rubberduckInstallDir -Force
 
 Write-Host "🏁 Rubberduck installation and configuration completed."
 
