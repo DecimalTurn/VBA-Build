@@ -283,8 +283,8 @@ try {
             "--installPath", "C:\BuildTools", 
             "--add", "Microsoft.VisualStudio.Workload.MSBuildTools", 
             "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
-            "--add", "Microsoft.Net.Component.4.6.1.TargetingPack",
-            "--add", "Microsoft.Net.Component.4.6.1.SDK"
+            "--add", "Microsoft.Net.Component.4.6.2.TargetingPack",
+            "--add", "Microsoft.Net.Component.4.6.2.SDK"
         )
         
         $vsProcess = Start-Process -FilePath $vsInstallerPath -ArgumentList $vsInstallerArgs -PassThru -Wait -NoNewWindow
@@ -344,7 +344,7 @@ try {
         
         # Install Build Tools with MSBuild
         Write-Host "Installing Visual Studio Build Tools with MSBuild component..."
-        & $vsInstallerPath --quiet --wait --norestart --nocache --installPath "C:\BuildTools" --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Net.Component.4.6.1.TargetingPack --add Microsoft.Net.Component.4.6.1.SDK
+        & $vsInstallerPath --quiet --wait --norestart --nocache --installPath "C:\BuildTools" --add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Net.Component.4.6.2.TargetingPack --add Microsoft.Net.Component.4.6.2.SDK --add Microsoft.VisualStudio.Component.NuGet.BuildTools
         
         $msbuildPath = "C:\BuildTools\MSBuild\15.0\Bin\MSBuild.exe"
         if (Test-Path $msbuildPath) {
