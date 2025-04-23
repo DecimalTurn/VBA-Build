@@ -311,7 +311,7 @@ try {
     }
     
     # Copy the binaries
-    $binFolder = Join-Path (Get-Location) "Rubberduck.Core\bin\Debug\net462"
+    $binFolder = Join-Path (Get-Location) "Rubberduck.Main\bin\Debug\net462"
     if (-not (Test-Path $binFolder)) {
         throw "Build output folder not found: $binFolder"
     }
