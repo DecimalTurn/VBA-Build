@@ -228,117 +228,98 @@ if (-not $rubberduckInstalled) {
     Write-Host "🎉 Rubberduck installed successfully and is (almost) ready to use!"
 }
 
-# Now we need to clone https://github.com/DecimalTurn/Rubberduck/tree/cli build the solution and 
-# copy the content of the bin folder to the Rubberduck installation folder (C:\Users\<username>\AppData\Local\Rubberduck)
+# Now we need to download the artifacts from the latest build in https://github.com/DecimalTurn/Rubberduck/actions/runs/14609505761/artifacts/2990874874
+# The artifacts are stored in a zip file and we need to extract them to the installation folder.
+# The installation folder is usually located in the following path:  C:\ProgramData\Rubberduck\
 
-$currentDir = Get-Location
-$tempDir = Join-Path $env:TEMP "RubberduckCLIBuild"
-$installFolder = "$env:LOCALAPPDATA\Rubberduck"
+Write-Host "⏳ Downloading and installing additional components..."
 
-# Remove any existing temp directory
-if (Test-Path $tempDir) {
-    Remove-Item -Path $tempDir -Recurse -Force
+# Define the artifact URL and download location
+$artifactUrl = "https://github.com/DecimalTurn/Rubberduck/actions/runs/14609505761/artifacts/2990874874"
+$artifactZipPath = "$env:TEMP\RubberduckArtifacts.zip"
+$rubberduckInstallDir = "C:\ProgramData\Rubberduck"
+
+# Function to check if we have GitHub CLI installed
+function Test-GitHubCLI {
+    try {
+        $null = Get-Command gh -ErrorAction Stop
+        return $true
+    } catch {
+        return $false
+    }
 }
 
-# Create temp directory and navigate to it
-New-Item -Path $tempDir -ItemType Directory -Force | Out-Null
-Set-Location $tempDir
-
+# Download the artifact
 try {
-    # Clone the repository
-    Write-Host "Cloning Rubberduck CLI branch..."
-    $gitCloneResult = git clone "https://github.com/DecimalTurn/Rubberduck.git" -b cli --depth 1
-    if ($LASTEXITCODE -ne 0) {
-        throw "Git clone failed with exit code $LASTEXITCODE"
-    }
-
-    Set-Location (Join-Path $tempDir "Rubberduck")
-
-
-    # Build the solution
-    Write-Host "🦆 Building Rubberduck solution..."
-    
-    # Download VS 2019 Build Tools installer
-    $vsInstallerUrl = "https://aka.ms/vs/16/release/vs_buildtools.exe"
-    $vsInstallerPath = Join-Path $env:TEMP "vs2019_buildtools.exe"
-    Invoke-WebRequest -Uri $vsInstallerUrl -OutFile $vsInstallerPath
-    
-    # Install VS 2019 Build Tools with necessary components
-    Write-Host "Installing Visual Studio 2019 Build Tools..."
-    
-    # Using Start-Process with Wait for better process handling
-    $vsInstallerArgs = @(
-        "--quiet", 
-        "--wait", 
-        "--norestart", 
-        "--nocache", 
-        "--installPath", "C:\BuildTools2019", 
-        "--add", "Microsoft.VisualStudio.Workload.MSBuildTools", 
-        "--add", "Microsoft.VisualStudio.Workload.NetCoreBuildTools",
-        "--add", "Microsoft.Net.Component.4.6.2.TargetingPack",
-        "--add", "Microsoft.Net.Component.4.6.2.SDK",
-        "--add", "Microsoft.VisualStudio.Component.NuGet.BuildTools"
-    )
-    
-    $vsProcess = Start-Process -FilePath $vsInstallerPath -ArgumentList $vsInstallerArgs -PassThru -Wait -NoNewWindow
-    if ($vsProcess.ExitCode -ne 0) {
-        Write-Warning "VS2019 Build Tools installer exited with code $($vsProcess.ExitCode)"
-    }
-    
-    # Set MSBuild path directly to installation location
-    $msbuildPath = "C:\BuildTools2019\MSBuild\Current\Bin\MSBuild.exe"
-    
-    # Verify installation
-    if (Test-Path $msbuildPath) {
-        Write-Host "✅ Visual Studio 2019 Build Tools installed successfully at C:\BuildTools2019"
-    } else {
-        throw "Visual Studio 2019 Build Tools installation failed. MSBuild not found at $msbuildPath"
-    }
-
-    # Add the MSBuild path to the top system PATH environment variable
-    $env:Path = "$msbuildPath;$env:Path"
-
-    Write-Host "Restoring NuGet packages..."
-    nuget restore RubberduckMeta.sln -MSBuildPath (Split-Path $msbuildPath)
-    nuget restore Rubberduck.sln -MSBuildPath (Split-Path $msbuildPath)
-
-    if (Test-Path $msbuildPath) {
-        Write-Host "Using MSBuild from: $msbuildPath"
-        & $msbuildPath "Rubberduck.sln" /p:Configuration=Debug #/verbosity:minimal
+    # Check if GitHub CLI is available
+    if (Test-GitHubCLI) {
+        # Use GitHub CLI to download the artifact
+        Write-Host "📥 Downloading artifact using GitHub CLI..."
+        gh auth status -t > $null 2>&1
         if ($LASTEXITCODE -ne 0) {
-            throw "MSBuild failed with exit code $LASTEXITCODE"
+            Write-Host "⚠️ GitHub CLI not authenticated. Please run 'gh auth login' first."
+            throw "GitHub CLI authentication required"
+        }
+        
+        # Download the artifact using GitHub CLI
+        gh run download 14609505761 -n "Rubberduck-Custom-Extensions" -D "$env:TEMP"
+        $artifactExtractPath = "$env:TEMP\Rubberduck-Custom-Extensions"
+    } else {
+        # Fallback to direct download if GitHub CLI is not available
+        Write-Host "📥 Downloading artifact using direct download..."
+        # Note: This might require authentication token in a real scenario
+        Invoke-WebRequest -Uri $artifactUrl -OutFile $artifactZipPath -Headers @{
+            "Accept" = "application/vnd.github.v3+json"
+            # "Authorization" = "token $env:GITHUB_TOKEN" # Uncomment and set token if needed
+        }
+        
+        # Create temporary directory for extraction
+        $artifactExtractPath = "$env:TEMP\Rubberduck-Custom-Extensions"
+        New-Item -ItemType Directory -Path $artifactExtractPath -Force | Out-Null
+        
+        # Extract the zip file
+        Write-Host "📦 Extracting artifact..."
+        Expand-Archive -Path $artifactZipPath -DestinationPath $artifactExtractPath -Force
+    }
+    
+    # Ensure the installation directory exists
+    if (-not (Test-Path $rubberduckInstallDir)) {
+        Write-Host "⚠️ Rubberduck installation directory not found at expected location: $rubberduckInstallDir"
+        # Try to find the installation directory
+        $commonAppDataPath = [System.Environment]::GetFolderPath("CommonApplicationData")
+        $possiblePath = "$commonAppDataPath\Rubberduck"
+        if (Test-Path $possiblePath) {
+            $rubberduckInstallDir = $possiblePath
+            Write-Host "✅ Found Rubberduck installation directory at: $rubberduckInstallDir"
+        } else {
+            throw "Could not locate Rubberduck installation directory"
         }
     }
     
-    # Copy the binaries
-    $binFolder = Join-Path (Get-Location) "Rubberduck.Main\bin\Debug\net462"
-    if (-not (Test-Path $binFolder)) {
-        throw "Build output folder not found: $binFolder"
+    # Copy the files to the installation directory
+    Write-Host "📋 Installing custom extensions to $rubberduckInstallDir..."
+    Get-ChildItem -Path $artifactExtractPath -Recurse -File | ForEach-Object {
+        $destinationPath = Join-Path -Path $rubberduckInstallDir -ChildPath $_.Name
+        Copy-Item -Path $_.FullName -Destination $destinationPath -Force
+        Write-Host "  - Installed: $($_.Name)"
     }
     
-    if (-not (Test-Path $installFolder)) {
-        New-Item -Path $installFolder -ItemType Directory -Force | Out-Null
+    # Clean up temporary files
+    if (Test-Path $artifactZipPath) {
+        Remove-Item -Path $artifactZipPath -Force
     }
+    if (Test-Path $artifactExtractPath) {
+        Remove-Item -Path $artifactExtractPath -Recurse -Force
+    }
+    
+    Write-Host "✅ Custom extensions installed successfully to Rubberduck installation!"
+    
+} catch {
+    Write-Host "❌ Error installing custom extensions: $($_.Exception.Message)"
+    Write-Host "   You may need to manually download and install the artifacts from:"
+    Write-Host "   $artifactUrl"
+}
 
-    Write-Host "Copying binaries to $installFolder..."
-    Copy-Item -Path "$binFolder\*" -Destination $installFolder -Recurse -Force
-    
-    # Verify files were copied
-    $fileCount = (Get-ChildItem -Path $installFolder -File).Count
-    Write-Host "✅ Rubberduck binaries copied to installation folder. $fileCount files transferred."
-} 
-catch {
-    Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "Installation of Rubberduck CLI failed." -ForegroundColor Red
-    exit 1
-}
-finally {
-    # Return to original directory
-    Set-Location $currentDir
-    
-    # Clean up temp directory
-    if (Test-Path $tempDir) {
-        Write-Host "Cleaning up temporary files..."
-        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
+Write-Host "🏁 Rubberduck installation and configuration completed."
+
+
