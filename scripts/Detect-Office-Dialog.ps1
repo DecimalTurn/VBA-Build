@@ -104,7 +104,8 @@ function Detect-OfficeDialog {
         "NUIDialog"         # Modern Office dialog
     )
     
-    $dialogFound = $false
+    $script:dialogFound = $false
+    $script:dialogWindows = @()  # Array to store dialog window details
     $windows = @()
     
     # Callback function for EnumWindows
@@ -141,9 +142,14 @@ function Detect-OfficeDialog {
                 foreach ($dialogClass in $dialogClassNames) {
                     if ($className -like "*$dialogClass*") {
                         $script:dialogFound = $true
-                        Write-Host "Dialog detected - Class: $className, Title: $title"
-                        # We could break here, but continue to collect all windows for debugging
-                        return $false # Stop enumeration once we find a dialog
+                        $script:dialogWindows += [PSCustomObject]@{
+                            Handle = $hwnd
+                            ClassName = $className
+                            Title = $title
+                            Type = "Class Match"
+                        }
+                        Write-Host "Dialog detected - Class: $className, Title: $title, Handle: $hwnd"
+                        # Continue enumeration to collect all dialogs
                     }
                 }
                 
@@ -155,8 +161,14 @@ function Detect-OfficeDialog {
                     $title -like "*Message*" -or
                     $title -like "*Visual Basic*") {
                     $script:dialogFound = $true
-                    Write-Host "Dialog detected by title - Class: $className, Title: $title"
-                    return $false # Stop enumeration once we find a dialog
+                    $script:dialogWindows += [PSCustomObject]@{
+                        Handle = $hwnd
+                        ClassName = $className
+                        Title = $title
+                        Type = "Title Match"
+                    }
+                    Write-Host "Dialog detected by title - Class: $className, Title: $title, Handle: $hwnd"
+                    # Continue enumeration to collect all dialogs
                 }
             }
         }
@@ -193,8 +205,12 @@ function Detect-OfficeDialog {
         }
     }
     
-    # Return whether a dialog was found
-    return $dialogFound
+    # Return more detailed information
+    return [PSCustomObject]@{
+        DialogFound = $dialogFound
+        DialogWindows = $script:dialogWindows
+        AllWindows = $windows
+    }
 }
 
 # Example usage
@@ -223,8 +239,13 @@ try {
         Start-Sleep -Seconds 5
         
         # Check for dialogs
-        $dialogOpen = Detect-OfficeDialog -officeAppName $appName -documentTitle $docName
-        Write-Host "Is there a dialog open in ${appName}? $dialogOpen"
+        $dialogResult = Detect-OfficeDialog -officeAppName $appName -documentTitle $docName
+        Write-Host "Is there a dialog open in ${appName}? $($dialogResult.DialogFound)"
+
+        if ($dialogResult.DialogFound) {
+            Write-Host "Found the following dialogs:"
+            $dialogResult.DialogWindows | Format-Table -AutoSize
+        }
     }
     else {
         Write-Host "Test file not found: $docPath"
