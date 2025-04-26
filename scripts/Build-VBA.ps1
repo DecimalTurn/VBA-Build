@@ -334,15 +334,11 @@ try {
     Write-Host "🟡 Warning: Could not execute macro ${macroName}: $($_.Exception.Message)"
 }
 
-
 # Display the VBE to activate the Rubberduck COM add-in
 $officeApp.CommandBars.ExecuteMso("VisualBasic")
 
 # Wait for a moment to ensure the VBE is fully loaded
 Start-Sleep -Seconds 2
-Take-Screenshot -OutputPath "${screenshotDir}Screenshot_VBE_${officeAppName}_{{timestamp}}.png"
-Start-Sleep -Seconds 3
-
 . "$scriptPath/Tests-Rubberduck-VBA.ps1"
 
 # Now perform all tests using Rubberduck
