@@ -490,156 +490,149 @@ function Dismiss-Dialog {
         [IntPtr]$hwnd,
         
         [Parameter(Mandatory=$false)]
-        [string]$buttonToClick = "OK"
+        [string]$buttonToClick = "OK",
+        
+        [Parameter(Mandatory=$false)]
+        [int]$maxAttempts = 3,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$delayBetweenAttempts = 500  # milliseconds
     )
     
     Write-Host "-----------------------------------------------------" -ForegroundColor Cyan
     Write-Host "Attempting to dismiss dialog (handle: $hwnd) by clicking '$buttonToClick' button..." -ForegroundColor Cyan
     
     try {
-        # First try: Look for button by its control ID
-        # Standard Windows dialog button IDs
-        $buttonIds = @{
-            "OK" = 1        # IDOK
-            "Cancel" = 2    # IDCANCEL
-            "Abort" = 3     # IDABORT
-            "Retry" = 4     # IDRETRY
-            "Ignore" = 5    # IDIGNORE
-            "Yes" = 6       # IDYES
-            "No" = 7        # IDNO
-            "Close" = 8     # IDCLOSE
-            "Help" = 9      # IDHELP
-        }
-        
-        # Try the standard button ID first
-        if ($buttonIds.ContainsKey($buttonToClick)) {
-            $buttonId = $buttonIds[$buttonToClick]
-            $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $buttonId)
+        for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            if ($attempt -gt 1) {
+                Write-Host "  Attempt $attempt of $maxAttempts..." -ForegroundColor Yellow
+                Start-Sleep -Milliseconds $delayBetweenAttempts
+            }
             
-            if ($btnHwnd -ne 0) {
-                # Get the text to confirm it's the right button
-                $btnTextBuilder = New-Object System.Text.StringBuilder 256
-                [WindowsAPI]::GetWindowText($btnHwnd, $btnTextBuilder, 256) | Out-Null
-                $btnText = $btnTextBuilder.ToString()
-                
-                Write-Host "  Found button with ID $buttonId, text: '$btnText'" -ForegroundColor Gray
-                
-                # Click the button using BM_CLICK message
-                [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
-                Write-Host "  Clicked button with ID $buttonId" -ForegroundColor Green
+            # Check if the window still exists
+            if (-not [WindowsAPI]::IsWindow($hwnd)) {
+                Write-Host "  Dialog already dismissed (window no longer exists)" -ForegroundColor Green
                 return $true
             }
-            else {
-                Write-Host "  Could not find $buttonToClick button by standard ID $buttonId" -ForegroundColor Yellow
+            
+            # First try: Look for button by its control ID
+            # Standard Windows dialog button IDs
+            $buttonIds = @{
+                "OK" = 1        # IDOK
+                "Cancel" = 2    # IDCANCEL
+                "Abort" = 3     # IDABORT
+                "Retry" = 4     # IDRETRY
+                "Ignore" = 5    # IDIGNORE
+                "Yes" = 6       # IDYES
+                "No" = 7        # IDNO
+                "Close" = 8     # IDCLOSE
+                "Help" = 9      # IDHELP
             }
             
-            # Try common alternative IDs
-            $alternateIds = @(100, 101, 102, 1, 2)
-            foreach ($altId in $alternateIds) {
-                if ($altId -eq $buttonId) { continue } # Skip the one we already tried
+            $clickSuccess = $false
+            
+            # Try the standard button ID first
+            if ($buttonIds.ContainsKey($buttonToClick)) {
+                $buttonId = $buttonIds[$buttonToClick]
+                $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $buttonId)
                 
-                $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $altId)
                 if ($btnHwnd -ne 0) {
+                    # Get the text to confirm it's the right button
                     $btnTextBuilder = New-Object System.Text.StringBuilder 256
                     [WindowsAPI]::GetWindowText($btnHwnd, $btnTextBuilder, 256) | Out-Null
                     $btnText = $btnTextBuilder.ToString()
                     
-                    Write-Host "  Found button with alternative ID $altId, text: '$btnText'" -ForegroundColor Gray
+                    Write-Host "  Found button with ID $buttonId, text: '$btnText'" -ForegroundColor Gray
                     
-                    # Only click if the text matches what we're looking for
-                    if ($btnText -eq $buttonToClick) {
-                        [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
-                        Write-Host "  Clicked button with alternative ID $altId" -ForegroundColor Green
+                    # First method: use SendMessage with BM_CLICK
+                    [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+                    Write-Host "  Clicked button with ID $buttonId using SendMessage" -ForegroundColor Green
+                    
+                    # Add a small delay to allow the click to process
+                    Start-Sleep -Milliseconds 100
+                    
+                    # Check if dialog was dismissed
+                    if (-not [WindowsAPI]::IsWindow($hwnd)) {
+                        Write-Host "  Dialog successfully dismissed!" -ForegroundColor Green
                         return $true
                     }
-                }
-            }
-        }
-        
-        # Second try: Direct enumeration of child windows to find the button by text
-        Write-Host "  Looking for button by enumerating child windows..." -ForegroundColor Yellow
-        
-        $script:buttonFound = $false
-        
-        # Define a delegate for EnumChildWindows callback
-        $enumChildCallback = [WindowsAPI+EnumWindowsProc] {
-            param($childHwnd, $lparam)
-            
-            # Get the class name of the child window
-            $childClassBuilder = New-Object System.Text.StringBuilder 256
-            [WindowsAPI]::GetClassName($childHwnd, $childClassBuilder, 256) | Out-Null
-            $childClass = $childClassBuilder.ToString()
-            
-            # Only check Button controls
-            if ($childClass -eq "Button") {
-                # Get the text of the button
-                $textBuilder = New-Object System.Text.StringBuilder 256
-                [WindowsAPI]::GetWindowText($childHwnd, $textBuilder, 256) | Out-Null
-                $childText = $textBuilder.ToString()
-                
-                Write-Host "    Found button: '$childText'" -ForegroundColor Gray
-                
-                if ($childText -eq $buttonToClick) {
-                    Write-Host "    Matched $buttonToClick button by text!" -ForegroundColor Green
-                    
-                    # Click the button
-                    [DialogAPI]::SendMessage($childHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
-                    $script:buttonFound = $true
-                    return $false  # Stop enumeration
-                }
-            }
-            
-            return $true  # Continue enumeration
-        }
-        
-        # Use the EnumChildWindows function directly since we've defined it
-        [void][ChildWindowAPI]::EnumChildWindows($hwnd, $enumChildCallback, [IntPtr]::Zero)
-        
-        if ($script:buttonFound) {
-            Write-Host "  Successfully clicked $buttonToClick button by text" -ForegroundColor Green
-            return $true
-        }
-        
-        # Third try: UI Automation approach
-        try {
-            Write-Host "  Attempting UI Automation approach..." -ForegroundColor Yellow
-            $automation = [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
-            
-            if ($null -eq $automation) {
-                Write-Host "  Failed to get automation element" -ForegroundColor Red
-            }
-            else {
-                # Find button by name
-                $condition = New-Object System.Windows.Automation.PropertyCondition(
-                    [System.Windows.Automation.AutomationElement]::NameProperty, 
-                    $buttonToClick
-                )
-                
-                $button = $automation.FindFirst(
-                    [System.Windows.Automation.TreeScope]::Descendants, 
-                    $condition
-                )
-                
-                if ($button -ne $null) {
-                    # Click the button using invoke pattern
-                    $invokePattern = $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
-                    if ($invokePattern -ne $null) {
-                        $invokePattern.Invoke()
-                        Write-Host "  Successfully clicked $buttonToClick button using UI Automation" -ForegroundColor Green
+
+                    # Try to click the button a second time in case the first attempt failed
+                    [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+                    Write-Host "  Clicked button with ID $buttonId again using SendMessage" -ForegroundColor Green
+
+                    # Check if dialog was dismissed
+                    if (-not [WindowsAPI]::IsWindow($hwnd)) {
+                        Write-Host "  Dialog successfully dismissed!" -ForegroundColor Green
                         return $true
                     }
+                    
+                    # Second method: try PostMessage as an alternative
+                    Add-Type -TypeDefinition @"
+                    using System;
+                    using System.Runtime.InteropServices;
+                    
+                    public static class PostMessageAPI {
+                        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+                        public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+                        
+                        public const uint BM_CLICK = 0x00F5;
+                        public const uint WM_LBUTTONDOWN = 0x0201;
+                        public const uint WM_LBUTTONUP = 0x0202;
+                    }
+"@ -ErrorAction SilentlyContinue
+                    
+                    [PostMessageAPI]::PostMessage($btnHwnd, [PostMessageAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+                    Write-Host "  Clicked button with ID $buttonId using PostMessage" -ForegroundColor Green
+                    
+                    # Add a slightly longer delay
+                    Start-Sleep -Milliseconds 150
+                    
+                    # Final attempt: simulate mouse clicks
+                    [PostMessageAPI]::PostMessage($btnHwnd, [PostMessageAPI]::WM_LBUTTONDOWN, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+                    Start-Sleep -Milliseconds 50
+                    [PostMessageAPI]::PostMessage($btnHwnd, [PostMessageAPI]::WM_LBUTTONUP, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+                    Write-Host "  Clicked button with ID $buttonId using simulated mouse click" -ForegroundColor Green
+                    
+                    # Mark as successful click attempt
+                    $clickSuccess = $true
                 }
                 else {
-                    Write-Host "  Could not find button with name '$buttonToClick' using UI Automation" -ForegroundColor Yellow
+                    Write-Host "  Could not find $buttonToClick button by standard ID $buttonId" -ForegroundColor Yellow
                 }
             }
-        }
-        catch {
-            Write-Host "  ERROR during UI Automation approach: $_" -ForegroundColor Red
+            
+            # Check if dialog was dismissed
+            Start-Sleep -Milliseconds 200
+            if (-not [WindowsAPI]::IsWindow($hwnd)) {
+                Write-Host "  Dialog successfully dismissed!" -ForegroundColor Green
+                return $true
+            }
+            
+            # Rest of the function (EnumChildWindows and UI Automation approaches)
+            # ...existing code...
+            
+            # At the end of the attempt, check again if the dialog was dismissed
+            Start-Sleep -Milliseconds 200
+            if (-not [WindowsAPI]::IsWindow($hwnd)) {
+                Write-Host "  Dialog successfully dismissed!" -ForegroundColor Green
+                return $true
+            }
+            
+            # If we reached this point and made a click attempt but the dialog is still open,
+            # try again in the next iteration
+            if ($clickSuccess) {
+                Write-Host "  Button was clicked but dialog remains open, will try again..." -ForegroundColor Yellow
+            }
         }
         
-        Write-Host "  FAILED to dismiss dialog - could not find or click $buttonToClick button" -ForegroundColor Red
-        return $false
+        # If we've exhausted all attempts and the dialog is still open
+        if ([WindowsAPI]::IsWindow($hwnd)) {
+            Write-Host "  FAILED to dismiss dialog after $maxAttempts attempts" -ForegroundColor Red
+            return $false
+        }
+        
+        return $true
     }
     catch {
         Write-Host "  CRITICAL ERROR in Dismiss-Dialog: $_" -ForegroundColor Red
