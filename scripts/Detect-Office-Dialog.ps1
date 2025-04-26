@@ -247,207 +247,209 @@ function Get-DialogContent {
     Write-Host "Get-DialogContent: Starting analysis of window handle: $hwnd" -ForegroundColor Cyan
     
     try {
-        # Try to get automation element
-        Write-Host "  Attempting to access UI Automation for window handle: $hwnd"
-        $automation = [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
-        
-        if ($null -eq $automation) {
-            Write-Host "  ERROR: Could not access UI Automation for window handle: $hwnd" -ForegroundColor Red
-            return [PSCustomObject]@{
-                MessageTexts = @()
-                ButtonTexts = @()
-                FullMessage = "ERROR: Could not access dialog automation"
-                Success = $false
-                ErrorMessage = "Failed to create automation element from handle"
-            }
-        }
-        
-        Write-Host "  Successfully created automation element. Name: $($automation.Current.Name)" -ForegroundColor Green
-        
         # Get the class name of the window
         $classNameBuilder = New-Object System.Text.StringBuilder 256
         [WindowsAPI]::GetClassName($hwnd, $classNameBuilder, 256) | Out-Null
         $className = $classNameBuilder.ToString()
         Write-Host "  Window class: $className" -ForegroundColor Yellow
         
-        # VBA MsgBox specific handling - try to find static text controls
+        # Get the window title
+        $titleBuilder = New-Object System.Text.StringBuilder 256
+        [WindowsAPI]::GetWindowText($hwnd, $titleBuilder, 256) | Out-Null
+        $title = $titleBuilder.ToString()
+        Write-Host "  Window title: $title" -ForegroundColor Yellow
+        
+        # Initialize collections
         $dialogTexts = @()
         $buttonTexts = @()
+        $controlsFound = $false
         
-        # First approach: Try Text control type (standard automation)
+        # APPROACH 1: Use Win32 API directly (most reliable for VBA dialogs)
         try {
-            Write-Host "  Approach 1: Looking for Text controls..."
-            $condition = New-Object System.Windows.Automation.PropertyCondition(
-                [System.Windows.Automation.AutomationElement]::ControlTypeProperty, 
-                [System.Windows.Automation.ControlType]::Text
-            )
+            Write-Host "  Approach 1: Using direct Win32 API to find child windows..." -ForegroundColor Yellow
             
-            $textElements = $automation.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
-            Write-Host "  Found $($textElements.Count) text elements" -ForegroundColor Yellow
+            # Create script-scope variables to collect results in the callback
+            $script:tempDialogTexts = @()
+            $script:tempButtonTexts = @()
             
-            if ($textElements -ne $null -and $textElements.Count -gt 0) {
-                foreach ($element in $textElements) {
-                    $name = $element.Current.Name
-                    if (-not [string]::IsNullOrWhiteSpace($name)) {
-                        $dialogTexts += $name
-                        Write-Host "    Text: $name" -ForegroundColor Gray
-                    }
-                }
-            }
-        }
-        catch {
-            Write-Host "  ERROR: Failed to find text elements - $_" -ForegroundColor Red
-        }
-        
-        # Second approach: Try to get all static text controls
-        if ($dialogTexts.Count -eq 0) {
-            try {
-                Write-Host "  Approach 2: Looking for Static controls..."
-                $staticCondition = New-Object System.Windows.Automation.PropertyCondition(
-                    [System.Windows.Automation.AutomationElement]::ControlTypeProperty, 
-                    [System.Windows.Automation.ControlType]::Edit
-                )
+            # Define a delegate for EnumChildWindows callback
+            $enumChildCallback = [WindowsAPI+EnumWindowsProc] {
+                param($childHwnd, $lparam)
                 
-                $staticElements = $automation.FindAll([System.Windows.Automation.TreeScope]::Descendants, $staticCondition)
-                Write-Host "  Found $($staticElements.Count) static elements" -ForegroundColor Yellow
+                # Get the class name of the child window
+                $childClassBuilder = New-Object System.Text.StringBuilder 256
+                [WindowsAPI]::GetClassName($childHwnd, $childClassBuilder, 256) | Out-Null
+                $childClass = $childClassBuilder.ToString()
                 
-                if ($staticElements -ne $null -and $staticElements.Count -gt 0) {
-                    foreach ($element in $staticElements) {
-                        $name = $element.Current.Name
-                        if (-not [string]::IsNullOrWhiteSpace($name)) {
-                            $dialogTexts += $name
-                            Write-Host "    Static: $name" -ForegroundColor Gray
-                        }
-                    }
-                }
-            }
-            catch {
-                Write-Host "  ERROR: Failed to find static elements - $_" -ForegroundColor Red
-            }
-        }
-        
-        # Third approach: Look for all elements
-        if ($dialogTexts.Count -eq 0) {
-            try {
-                Write-Host "  Approach 3: Looking for all elements..."
-                $allElements = $automation.FindAll([System.Windows.Automation.TreeScope]::Descendants, 
-                    [System.Windows.Automation.Condition]::TrueCondition)
+                # Get the text of the child window
+                $textBuilder = New-Object System.Text.StringBuilder 1024
+                [WindowsAPI]::GetWindowText($childHwnd, $textBuilder, 1024) | Out-Null
+                $childText = $textBuilder.ToString()
                 
-                Write-Host "  Found $($allElements.Count) total elements" -ForegroundColor Yellow
-                
-                # Loop through all elements to find text-like content
-                foreach ($element in $allElements) {
-                    if (-not [string]::IsNullOrWhiteSpace($element.Current.Name)) {
-                        Write-Host "    Element: $($element.Current.ControlType.ProgrammaticName) - '$($element.Current.Name)'" -ForegroundColor Gray
-                        
-                        # Only include elements that are likely to contain message text
-                        if ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Text -or
-                            $element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Edit -or
-                            $element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Document -or
-                            $element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Pane -or
-                            $element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Group) {
-                            
-                            $dialogTexts += $element.Current.Name
-                            Write-Host "      Added as dialog text" -ForegroundColor Green
-                        }
-                        
-                        # Identify buttons
-                        if ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button) {
-                            $buttonTexts += $element.Current.Name
-                            Write-Host "      Added as button" -ForegroundColor Green
-                        }
-                    }
-                }
-            }
-            catch {
-                Write-Host "  ERROR: Failed during element enumeration - $_" -ForegroundColor Red
-            }
-        }
-        
-        # Fourth approach: Try direct Win32 API approach for VBA dialogs
-        if ($dialogTexts.Count -eq 0) {
-            try {
-                Write-Host "  Approach 4: Using Win32 API to find child windows..." -ForegroundColor Yellow
-                
-                # Define a delegate for EnumChildWindows callback
-                $enumChildCallback = [WindowsAPI+EnumWindowsProc] {
-                    param($childHwnd, $lparam)
-                    
-                    # Get the class name of the child window
-                    $childClassBuilder = New-Object System.Text.StringBuilder 256
-                    [WindowsAPI]::GetClassName($childHwnd, $childClassBuilder, 256) | Out-Null
-                    $childClass = $childClassBuilder.ToString()
-                    
-                    # Get the text of the child window
-                    $textBuilder = New-Object System.Text.StringBuilder 1024
-                    [WindowsAPI]::GetWindowText($childHwnd, $textBuilder, 1024) | Out-Null
-                    $childText = $textBuilder.ToString()
-                    
+                if (-not [string]::IsNullOrWhiteSpace($childText)) {
                     Write-Host "    Child Window - Class: $childClass, Text: $childText" -ForegroundColor Gray
                     
-                    # Static text control often has the message
+                    # Static text control typically contains the message text
                     if ($childClass -eq "Static" -and -not [string]::IsNullOrWhiteSpace($childText)) {
                         $script:tempDialogTexts += $childText
+                        Write-Host "      Added as dialog text" -ForegroundColor Green
                     }
                     
                     # Button controls
-                    if ($childClass -eq "Button" -and -not [string]::IsNullOrWhiteSpace($childText)) {
+                    elseif ($childClass -eq "Button" -and -not [string]::IsNullOrWhiteSpace($childText)) {
                         $script:tempButtonTexts += $childText
+                        Write-Host "      Added as button" -ForegroundColor Green
+                    }
+                }
+                
+                return $true  # Continue enumeration
+            }
+            
+            # Enumerate child windows using alternative API
+            if (-not [ChildWindowAPI]::EnumChildWindows($hwnd, $enumChildCallback, [IntPtr]::Zero)) {
+                Write-Host "  Warning: EnumChildWindows returned false" -ForegroundColor Yellow
+            }
+            
+            # Add results to our main collections
+            if ($script:tempDialogTexts.Count -gt 0) {
+                $dialogTexts += $script:tempDialogTexts
+                $controlsFound = $true
+                Write-Host "  Found dialog text using Win32 API: $($script:tempDialogTexts -join ', ')" -ForegroundColor Green
+            }
+            
+            if ($script:tempButtonTexts.Count -gt 0) {
+                $buttonTexts += $script:tempButtonTexts
+                Write-Host "  Found button text using Win32 API: $($script:tempButtonTexts -join ', ')" -ForegroundColor Green
+            }
+        }
+        catch {
+            Write-Host "  ERROR: Exception during Win32 API approach - $_" -ForegroundColor Red
+        }
+        
+        # APPROACH 2: Try UI Automation as a fallback
+        if (-not $controlsFound) {
+            try {
+                Write-Host "  Approach 2: Attempting UI Automation..." -ForegroundColor Yellow
+                $automation = [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
+                
+                if ($null -eq $automation) {
+                    Write-Host "  Failed to get automation element" -ForegroundColor Red
+                }
+                else {
+                    Write-Host "  Successfully created automation element" -ForegroundColor Green
+                    
+                    # Get all elements
+                    $allElements = $automation.FindAll(
+                        [System.Windows.Automation.TreeScope]::Descendants, 
+                        [System.Windows.Automation.Condition]::TrueCondition
+                    )
+                    
+                    Write-Host "  Found $($allElements.Count) total UI elements" -ForegroundColor Yellow
+                    
+                    # Identify buttons first
+                    foreach ($element in $allElements) {
+                        if (-not [string]::IsNullOrWhiteSpace($element.Current.Name) -and 
+                            $element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button) {
+                            $buttonTexts += $element.Current.Name
+                            Write-Host "    Button: $($element.Current.Name)" -ForegroundColor Gray
+                        }
                     }
                     
-                    return $true  # Continue enumeration
-                }
-                
-                # Create script-scope variables to collect results in the callback
-                $script:tempDialogTexts = @()
-                $script:tempButtonTexts = @()
-                
-                # Add EnumChildWindows to WindowsAPI if it doesn't exist
-                Add-Type -TypeDefinition @"
-                using System;
-                using System.Runtime.InteropServices;
-                
-                public static class ChildWindowAPI {
-                    [DllImport("user32.dll")]
-                    [return: MarshalAs(UnmanagedType.Bool)]
-                    public static extern bool EnumChildWindows(IntPtr hWndParent, WindowsAPI.EnumWindowsProc lpEnumFunc, IntPtr lParam);
-                }
-"@ -ErrorAction SilentlyContinue
-                
-                # Enumerate child windows
-                [ChildWindowAPI]::EnumChildWindows($hwnd, $enumChildCallback, [IntPtr]::Zero)
-                
-                # Add results to our main collections
-                if ($script:tempDialogTexts.Count -gt 0) {
-                    $dialogTexts += $script:tempDialogTexts
-                    Write-Host "  Found dialog text using Win32 API: $($script:tempDialogTexts -join ', ')" -ForegroundColor Green
-                }
-                
-                if ($script:tempButtonTexts.Count -gt 0) {
-                    $buttonTexts += $script:tempButtonTexts
-                    Write-Host "  Found button text using Win32 API: $($script:tempButtonTexts -join ', ')" -ForegroundColor Green
+                    # Then look for text elements, avoiding button names
+                    foreach ($element in $allElements) {
+                        if (-not [string]::IsNullOrWhiteSpace($element.Current.Name) -and
+                            ($element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Text -or
+                             $element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Edit -or
+                             $element.Current.ControlType -eq [System.Windows.Automation.ControlType]::Pane)) {
+                            
+                            # Skip if this is a known button name
+                            if ($buttonTexts -notcontains $element.Current.Name) {
+                                $dialogTexts += $element.Current.Name
+                                Write-Host "    Text: $($element.Current.Name)" -ForegroundColor Gray
+                            }
+                        }
+                    }
                 }
             }
             catch {
-                Write-Host "  ERROR: Exception during Win32 API approach - $_" -ForegroundColor Red
+                Write-Host "  ERROR: Exception during UI Automation - $_" -ForegroundColor Red
             }
         }
+        
+        # APPROACH 3: If no better information is available, use the window title as fallback
+        if ($dialogTexts.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($title)) {
+            Write-Host "  Using window title as fallback for dialog text: $title" -ForegroundColor Yellow
+            $dialogTexts += $title
+        }
+        
+        # Process results for standard Office dialog buttons
+        if ($buttonTexts.Count -eq 0) {
+            # Check for standard dialog button patterns
+            if ($className -eq "#32770") {
+                Write-Host "  Standard dialog detected, checking for common button patterns..." -ForegroundColor Yellow
+                
+                # Look for standard button IDs
+                $buttonIds = @(1, 2, 6, 7)  # OK, Cancel, Yes, No
+                $foundButtons = $false
+                
+                foreach ($id in $buttonIds) {
+                    $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $id)
+                    if ($btnHwnd -ne 0) {
+                        $btnTextBuilder = New-Object System.Text.StringBuilder 256
+                        [WindowsAPI]::GetWindowText($btnHwnd, $btnTextBuilder, 256) | Out-Null
+                        $btnText = $btnTextBuilder.ToString()
+                        
+                        if (-not [string]::IsNullOrWhiteSpace($btnText)) {
+                            $buttonTexts += $btnText
+                            $foundButtons = $true
+                            Write-Host "    Found standard button ID $id`: $btnText" -ForegroundColor Green
+                        }
+                    }
+                }
+                
+                if (-not $foundButtons) {
+                    Write-Host "    Could not find standard buttons by ID" -ForegroundColor Yellow
+                    
+                    # Make educated guesses based on dialog title
+                    if ($title -match "Error|Warning|Alert") {
+                        $buttonTexts += "OK"
+                        Write-Host "    Added assumed 'OK' button based on error/warning dialog" -ForegroundColor Yellow
+                    }
+                }
+            }
+        }
+        
+        # Clean up potential duplicates
+        $dialogTexts = $dialogTexts | Select-Object -Unique
+        $buttonTexts = $buttonTexts | Select-Object -Unique
+        
+        # Create the full message
+        $fullMessage = $dialogTexts -join " "
+        
+        Write-Host "  Final dialog content - Message: '$fullMessage'" -ForegroundColor Green
+        Write-Host "  Final dialog content - Buttons: '$($buttonTexts -join ", ")'" -ForegroundColor Green
         
         return [PSCustomObject]@{
             MessageTexts = $dialogTexts
             ButtonTexts = $buttonTexts
-            FullMessage = ($dialogTexts -join " ")
+            FullMessage = $fullMessage
+            Success = $true
+            WindowClass = $className
+            WindowTitle = $title
         }
     }
     catch {
-        Write-Host "  ERROR: Exception during Get-DialogContent - $_" -ForegroundColor Red
+        Write-Host "  CRITICAL ERROR in Get-DialogContent: $_" -ForegroundColor Red
         return [PSCustomObject]@{
             MessageTexts = @()
             ButtonTexts = @()
-            FullMessage = "ERROR: Exception during Get-DialogContent"
+            FullMessage = "ERROR: $($_.Exception.Message)"
             Success = $false
             ErrorMessage = $_.Exception.Message
         }
+    }
+    finally {
+        Write-Host "-----------------------------------------------------" -ForegroundColor Cyan
     }
 }
 
