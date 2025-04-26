@@ -2,7 +2,7 @@ name: Rubberduck
 on:
   workflow_dispatch:
 jobs:   
-  screenshot:
+  install-rubberduck:
     runs-on: windows-latest
     steps:
       - name: "Checkout"
