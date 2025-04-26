@@ -10,14 +10,14 @@ function Test-WithRubberduck {
     try {
         $rubberduckAddin = $officeApp.VBE.AddIns("Rubberduck.Extension")
         if ($null -eq $rubberduckAddin) {
-            Write-Host "🔴 Error: Rubberduck add-in not found. Please install it first."
+            Write-Host "🔴 Error: Rubberduck add-in not found."
             return $false
         }
         Write-Host "Rubberduck add-in found."
 
         $rubberduck = $rubberduckAddin.Object
         if ($null -eq $rubberduck) {
-            Write-Host "🔴 Error: Rubberduck object not found. Please ensure it is properly installed."
+            Write-Host "🔴 Error: Rubberduck object not found."
             return $false
         }
         Write-Host "Rubberduck object found."
@@ -25,10 +25,31 @@ function Test-WithRubberduck {
         # Run all tests in the active VBA project
         $logPath = "$env:temp\RubberduckTestLog.txt"
         $rubberduck.RunAllTestsAndGetResults($logPath)
-        Write-Host "All tests executed successfully."
-
-        # Wait for tests to complete (optional: add a timeout)
-        Start-Sleep -Seconds 10
+        
+        # Wait for tests to complete with a timeout of 3 minutes
+        $timeout = New-TimeSpan -Minutes 3
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        $testCompleted = $false
+        
+        Write-Host "Waiting for tests to complete (timeout: 3 minutes)..."
+        while ($stopwatch.Elapsed -lt $timeout -and -not $testCompleted) {
+            if (Test-Path $logPath) {
+                $content = Get-Content -Path $logPath -ErrorAction SilentlyContinue
+                if ($null -ne $content -and $content.Count -gt 0) {
+                    $testCompleted = $true
+                    Write-Host "Tests completed in $([math]::Round($stopwatch.Elapsed.TotalSeconds, 2)) seconds."
+                    break
+                }
+            }
+            Start-Sleep -Seconds 2
+        }
+        
+        $stopwatch.Stop()
+        
+        if (-not $testCompleted) {
+            Write-Host "🔴 Error: Test execution timed out after 3 minutes."
+            return $false
+        }
 
         # Retrieve test results from the log file and display each line in the console
         # For each line if it starts with "Succeeded", add "✅" to the line, otherwise add "❌"
@@ -43,7 +64,7 @@ function Test-WithRubberduck {
                 }
             }
         } else {
-            Write-Host "🔴 Error: Log file not found. Please check the installation."
+            Write-Host "🔴 Error: Log file not found."
             return $false
         }
 
