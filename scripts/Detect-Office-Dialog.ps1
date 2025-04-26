@@ -42,7 +42,13 @@ public class WindowsAPI {
     
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 }
-"@
+
+public static class ChildWindowAPI {
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool EnumChildWindows(IntPtr hWndParent, WindowsAPI.EnumWindowsProc lpEnumFunc, IntPtr lParam);
+}
+"@ -ErrorAction SilentlyContinue
 
 function Detect-OfficeDialog {
     param (
@@ -467,47 +473,80 @@ function Dismiss-Dialog {
     
     try {
         # First try: Look for button by its control ID
+        # Standard Windows dialog button IDs
         $buttonIds = @{
-            "OK" = 1
-            "Cancel" = 2
-            "Abort" = 3
-            "Retry" = 4
-            "Ignore" = 5
-            "Yes" = 6
-            "No" = 7
-            "Close" = 8
-            "Help" = 9
+            "OK" = 1        # IDOK
+            "Cancel" = 2    # IDCANCEL
+            "Abort" = 3     # IDABORT
+            "Retry" = 4     # IDRETRY
+            "Ignore" = 5    # IDIGNORE
+            "Yes" = 6       # IDYES
+            "No" = 7        # IDNO
+            "Close" = 8     # IDCLOSE
+            "Help" = 9      # IDHELP
         }
         
+        # Add SendMessage to DialogAPI if it doesn't exist
+        Add-Type -TypeDefinition @"
+        using System;
+        using System.Runtime.InteropServices;
+        
+        public static class DialogAPI {
+            [DllImport("user32.dll", CharSet = CharSet.Auto)]
+            public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+            
+            public const uint BM_CLICK = 0x00F5;
+        }
+"@ -ErrorAction SilentlyContinue
+        
+        # Try the standard button ID first
         if ($buttonIds.ContainsKey($buttonToClick)) {
             $buttonId = $buttonIds[$buttonToClick]
             $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $buttonId)
             
             if ($btnHwnd -ne 0) {
-                # Add SendMessage to WindowsAPI if it doesn't exist
-                Add-Type -TypeDefinition @"
-                using System;
-                using System.Runtime.InteropServices;
+                # Get the text to confirm it's the right button
+                $btnTextBuilder = New-Object System.Text.StringBuilder 256
+                [WindowsAPI]::GetWindowText($btnHwnd, $btnTextBuilder, 256) | Out-Null
+                $btnText = $btnTextBuilder.ToString()
                 
-                public static class DialogAPI {
-                    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-                    public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-                    
-                    public const uint BM_CLICK = 0x00F5;
-                }
-"@ -ErrorAction SilentlyContinue
+                Write-Host "  Found button with ID $buttonId, text: '$btnText'" -ForegroundColor Gray
                 
                 # Click the button using BM_CLICK message
                 [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
-                Write-Host "  Clicked $buttonToClick button using standard dialog ID $buttonId" -ForegroundColor Green
+                Write-Host "  Clicked button with ID $buttonId" -ForegroundColor Green
                 return $true
             }
             else {
-                Write-Host "  Could not find $buttonToClick button by ID $buttonId" -ForegroundColor Yellow
+                Write-Host "  Could not find $buttonToClick button by standard ID $buttonId" -ForegroundColor Yellow
+            }
+            
+            # Try common alternative IDs
+            $alternateIds = @(100, 101, 102, 1, 2)
+            foreach ($altId in $alternateIds) {
+                if ($altId -eq $buttonId) { continue } # Skip the one we already tried
+                
+                $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $altId)
+                if ($btnHwnd -ne 0) {
+                    $btnTextBuilder = New-Object System.Text.StringBuilder 256
+                    [WindowsAPI]::GetWindowText($btnHwnd, $btnTextBuilder, 256) | Out-Null
+                    $btnText = $btnTextBuilder.ToString()
+                    
+                    Write-Host "  Found button with alternative ID $altId, text: '$btnText'" -ForegroundColor Gray
+                    
+                    # Only click if the text matches what we're looking for
+                    if ($btnText -eq $buttonToClick) {
+                        [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+                        Write-Host "  Clicked button with alternative ID $altId" -ForegroundColor Green
+                        return $true
+                    }
+                }
             }
         }
         
-        # Second try: Enumerate child windows to find button by text
+        # Second try: Direct enumeration of child windows to find the button by text
+        Write-Host "  Looking for button by enumerating child windows..." -ForegroundColor Yellow
+        
         $script:buttonFound = $false
         
         # Define a delegate for EnumChildWindows callback
@@ -526,8 +565,10 @@ function Dismiss-Dialog {
                 [WindowsAPI]::GetWindowText($childHwnd, $textBuilder, 256) | Out-Null
                 $childText = $textBuilder.ToString()
                 
+                Write-Host "    Found button: '$childText'" -ForegroundColor Gray
+                
                 if ($childText -eq $buttonToClick) {
-                    Write-Host "  Found $buttonToClick button by text" -ForegroundColor Green
+                    Write-Host "    Matched $buttonToClick button by text!" -ForegroundColor Green
                     
                     # Click the button
                     [DialogAPI]::SendMessage($childHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
@@ -539,8 +580,8 @@ function Dismiss-Dialog {
             return $true  # Continue enumeration
         }
         
-        # Enumerate child windows
-        [ChildWindowAPI]::EnumChildWindows($hwnd, $enumChildCallback, [IntPtr]::Zero)
+        # Use the EnumChildWindows function directly since we've defined it
+        [void][ChildWindowAPI]::EnumChildWindows($hwnd, $enumChildCallback, [IntPtr]::Zero)
         
         if ($script:buttonFound) {
             Write-Host "  Successfully clicked $buttonToClick button by text" -ForegroundColor Green
@@ -575,6 +616,9 @@ function Dismiss-Dialog {
                         Write-Host "  Successfully clicked $buttonToClick button using UI Automation" -ForegroundColor Green
                         return $true
                     }
+                }
+                else {
+                    Write-Host "  Could not find button with name '$buttonToClick' using UI Automation" -ForegroundColor Yellow
                 }
             }
         }
