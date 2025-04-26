@@ -453,6 +453,147 @@ function Get-DialogContent {
     }
 }
 
+function Dismiss-Dialog {
+    param (
+        [Parameter(Mandatory=$true)]
+        [IntPtr]$hwnd,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$buttonToClick = "OK"
+    )
+    
+    Write-Host "-----------------------------------------------------" -ForegroundColor Cyan
+    Write-Host "Attempting to dismiss dialog (handle: $hwnd) by clicking '$buttonToClick' button..." -ForegroundColor Cyan
+    
+    try {
+        # First try: Look for button by its control ID
+        $buttonIds = @{
+            "OK" = 1
+            "Cancel" = 2
+            "Abort" = 3
+            "Retry" = 4
+            "Ignore" = 5
+            "Yes" = 6
+            "No" = 7
+            "Close" = 8
+            "Help" = 9
+        }
+        
+        if ($buttonIds.ContainsKey($buttonToClick)) {
+            $buttonId = $buttonIds[$buttonToClick]
+            $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $buttonId)
+            
+            if ($btnHwnd -ne 0) {
+                # Add SendMessage to WindowsAPI if it doesn't exist
+                Add-Type -TypeDefinition @"
+                using System;
+                using System.Runtime.InteropServices;
+                
+                public static class DialogAPI {
+                    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+                    public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+                    
+                    public const uint BM_CLICK = 0x00F5;
+                }
+"@ -ErrorAction SilentlyContinue
+                
+                # Click the button using BM_CLICK message
+                [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+                Write-Host "  Clicked $buttonToClick button using standard dialog ID $buttonId" -ForegroundColor Green
+                return $true
+            }
+            else {
+                Write-Host "  Could not find $buttonToClick button by ID $buttonId" -ForegroundColor Yellow
+            }
+        }
+        
+        # Second try: Enumerate child windows to find button by text
+        $script:buttonFound = $false
+        
+        # Define a delegate for EnumChildWindows callback
+        $enumChildCallback = [WindowsAPI+EnumWindowsProc] {
+            param($childHwnd, $lparam)
+            
+            # Get the class name of the child window
+            $childClassBuilder = New-Object System.Text.StringBuilder 256
+            [WindowsAPI]::GetClassName($childHwnd, $childClassBuilder, 256) | Out-Null
+            $childClass = $childClassBuilder.ToString()
+            
+            # Only check Button controls
+            if ($childClass -eq "Button") {
+                # Get the text of the button
+                $textBuilder = New-Object System.Text.StringBuilder 256
+                [WindowsAPI]::GetWindowText($childHwnd, $textBuilder, 256) | Out-Null
+                $childText = $textBuilder.ToString()
+                
+                if ($childText -eq $buttonToClick) {
+                    Write-Host "  Found $buttonToClick button by text" -ForegroundColor Green
+                    
+                    # Click the button
+                    [DialogAPI]::SendMessage($childHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+                    $script:buttonFound = $true
+                    return $false  # Stop enumeration
+                }
+            }
+            
+            return $true  # Continue enumeration
+        }
+        
+        # Enumerate child windows
+        [ChildWindowAPI]::EnumChildWindows($hwnd, $enumChildCallback, [IntPtr]::Zero)
+        
+        if ($script:buttonFound) {
+            Write-Host "  Successfully clicked $buttonToClick button by text" -ForegroundColor Green
+            return $true
+        }
+        
+        # Third try: UI Automation approach
+        try {
+            Write-Host "  Attempting UI Automation approach..." -ForegroundColor Yellow
+            $automation = [System.Windows.Automation.AutomationElement]::FromHandle($hwnd)
+            
+            if ($null -eq $automation) {
+                Write-Host "  Failed to get automation element" -ForegroundColor Red
+            }
+            else {
+                # Find button by name
+                $condition = New-Object System.Windows.Automation.PropertyCondition(
+                    [System.Windows.Automation.AutomationElement]::NameProperty, 
+                    $buttonToClick
+                )
+                
+                $button = $automation.FindFirst(
+                    [System.Windows.Automation.TreeScope]::Descendants, 
+                    $condition
+                )
+                
+                if ($button -ne $null) {
+                    # Click the button using invoke pattern
+                    $invokePattern = $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+                    if ($invokePattern -ne $null) {
+                        $invokePattern.Invoke()
+                        Write-Host "  Successfully clicked $buttonToClick button using UI Automation" -ForegroundColor Green
+                        return $true
+                    }
+                }
+            }
+        }
+        catch {
+            Write-Host "  ERROR during UI Automation approach: $_" -ForegroundColor Red
+        }
+        
+        Write-Host "  FAILED to dismiss dialog - could not find or click $buttonToClick button" -ForegroundColor Red
+        return $false
+    }
+    catch {
+        Write-Host "  CRITICAL ERROR in Dismiss-Dialog: $_" -ForegroundColor Red
+        return $false
+    }
+    finally {
+        Write-Host "-----------------------------------------------------" -ForegroundColor Cyan
+    }
+}
+
 # Example usage
 $appName = "Excel" # Change this to the desired Office application (Excel, Word, PowerPoint, Access)
 $officeApp = New-Object -ComObject "$appName.Application"
@@ -486,6 +627,35 @@ try {
         if ($dialogResult.DialogFound) {
             Write-Host "Found the following dialogs:"
             $dialogResult.DialogWindows | Format-Table -AutoSize
+            
+            # Automatically dismiss dialogs
+            foreach ($dialog in $dialogResult.DialogWindows) {
+                # Decide which button to click based on the dialog type
+                $buttonToClick = "OK"  # Default
+                
+                if ($dialog.Buttons -like "*OK*") {
+                    $buttonToClick = "OK"
+                }
+                elseif ($dialog.Buttons -like "*Yes*") {
+                    $buttonToClick = "Yes"
+                }
+                elseif ($dialog.Buttons -like "*No*") {
+                    $buttonToClick = "No"  # You might want to choose differently
+                }
+                elseif ($dialog.Buttons -like "*Cancel*") {
+                    $buttonToClick = "Cancel"
+                }
+                
+                Write-Host "Attempting to dismiss dialog: $($dialog.Title) by clicking $buttonToClick"
+                $dismissed = Dismiss-Dialog -hwnd $dialog.Handle -buttonToClick $buttonToClick
+                
+                if ($dismissed) {
+                    Write-Host "Successfully dismissed dialog: $($dialog.Title)" -ForegroundColor Green
+                }
+                else {
+                    Write-Host "Failed to dismiss dialog: $($dialog.Title)" -ForegroundColor Red
+                }
+            }
         }
     }
     else {
