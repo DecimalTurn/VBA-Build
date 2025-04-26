@@ -1,13 +1,15 @@
 # The goal of this function is to detect if an Office dialog is open and return a boolean value indicating whether it is open or not.
 # This uses Windows UI Automation to detect dialog windows belonging to the Office application process.
 
+# Add required assemblies
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName System.Drawing
 
 # Try to create the types only if they don't already exist
-if (-not ([System.Management.Automation.PSTypeName]'WindowsAPI').Type) {
-    Add-Type -TypeDefinition @"
+try {
+    if (-not ([System.Management.Automation.PSTypeName]'WindowsAPI').Type) {
+        Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
 
@@ -41,38 +43,28 @@ public class WindowsAPI {
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     public static extern int GetWindowTextLength(IntPtr hWnd);
     
-    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-}
-"@ -ErrorAction SilentlyContinue
-}
-
-# Add ChildWindowAPI separately
-if (-not ([System.Management.Automation.PSTypeName]'ChildWindowAPI').Type) {
-    Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-
-public static class ChildWindowAPI {
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool EnumChildWindows(IntPtr hWndParent, WindowsAPI.EnumWindowsProc lpEnumFunc, IntPtr lParam);
-}
-"@ -ErrorAction SilentlyContinue
-}
+    public static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
-# Add DialogAPI separately
-if (-not ([System.Management.Automation.PSTypeName]'DialogAPI').Type) {
-    Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-
-public static class DialogAPI {
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
     
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+    
     public const uint BM_CLICK = 0x00F5;
+    public const uint WM_LBUTTONDOWN = 0x0201;
+    public const uint WM_LBUTTONUP = 0x0202;
+    
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 }
-"@ -ErrorAction SilentlyContinue
+"@ -ErrorAction Stop
+    }
+} 
+catch {
+    Write-Warning "Failed to create Win32 API types: $_"
+    Write-Warning "The script will try to continue but some functionality may be limited."
 }
 
 function Detect-OfficeDialog {
@@ -502,33 +494,70 @@ function Dismiss-Dialog {
     Write-Host "-----------------------------------------------------" -ForegroundColor Cyan
     Write-Host "Attempting to dismiss dialog (handle: $hwnd) by clicking '$buttonToClick' button..." -ForegroundColor Cyan
     
+    # Check if the window still exists
+    if (-not [WindowsAPI]::IsWindow($hwnd)) {
+        Write-Host "  Dialog already dismissed (window no longer exists)" -ForegroundColor Green
+        return $true
+    }
+
+    # First try: Look for button by its control ID
+    # Standard Windows dialog button IDs
+    $buttonIds = @{
+        "OK" = 1        # IDOK
+        "Cancel" = 2    # IDCANCEL
+        "Abort" = 3     # IDABORT
+        "Retry" = 4     # IDRETRY
+        "Ignore" = 5    # IDIGNORE
+        "Yes" = 6       # IDYES
+        "No" = 7        # IDNO
+        "Close" = 8     # IDCLOSE
+        "Help" = 9      # IDHELP
+    }
+
+    if ($buttonIds.ContainsKey($buttonToClick)) {
+        $buttonId = $buttonIds[$buttonToClick]
+    }
+    else {
+        Write-Host "  Button '$buttonToClick' not found in standard button" -ForegroundColor Red
+        return $false
+    }
+
+    $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $buttonId)
+
+    if ($btnHwnd -eq 0) {
+        Write-Host "  Button not found by ID, trying other methods..." -ForegroundColor Yellow
+
+        # Try common alternative IDs
+        $alternateIds = @(100, 101, 102, 1, 2)
+
+        $foundButton = $false
+        foreach ($id in $alternateIds) {
+            $btnHwnd = [WindowsAPI]::GetDlgItem($hwnd, $id)
+            if ($btnHwnd -ne 0) {
+                $foundButton = $true
+                Write-Host "  Found button by alternate ID: $id" -ForegroundColor Green
+                break
+            }
+        }
+        if (-not $foundButton) {
+            Write-Host "  No button found by alternate IDs" -ForegroundColor Red
+            return $false
+        }
+
+    }
+    else {
+        Write-Host "  Button found by ID: $buttonId" -ForegroundColor Green
+    }
+
+
+
     try {
         for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
             if ($attempt -gt 1) {
                 Write-Host "  Attempt $attempt of $maxAttempts..." -ForegroundColor Yellow
                 Start-Sleep -Milliseconds $delayBetweenAttempts
             }
-            
-            # Check if the window still exists
-            if (-not [WindowsAPI]::IsWindow($hwnd)) {
-                Write-Host "  Dialog already dismissed (window no longer exists)" -ForegroundColor Green
-                return $true
-            }
-            
-            # First try: Look for button by its control ID
-            # Standard Windows dialog button IDs
-            $buttonIds = @{
-                "OK" = 1        # IDOK
-                "Cancel" = 2    # IDCANCEL
-                "Abort" = 3     # IDABORT
-                "Retry" = 4     # IDRETRY
-                "Ignore" = 5    # IDIGNORE
-                "Yes" = 6       # IDYES
-                "No" = 7        # IDNO
-                "Close" = 8     # IDCLOSE
-                "Help" = 9      # IDHELP
-            }
-            
+
             $clickSuccess = $false
             
             # Try the standard button ID first
