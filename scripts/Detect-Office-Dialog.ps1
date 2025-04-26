@@ -41,32 +41,57 @@ public class WindowsAPI {
 function Detect-OfficeDialog {
     param (
         [Parameter(Mandatory=$true)]
-        [object]$officeApp
+        [object]$officeAppName,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$documentTitle = ""
     )
    
-    # First, try to get the process ID of the Office application
-    try {
-        $processId = $officeApp.Application.Pid
-    }
-    catch {
-        # If .Pid is not available, try another approach to get the process
-        try {
-            $appTitle = $officeApp.Caption
-            $process = Get-Process | Where-Object { $_.MainWindowTitle -eq $appTitle }
-            $processId = $process.Id
+    Write-Host "Detecting Office dialog for application: $officeAppName"
+    Write-Host "Looking for Office window with document: $documentTitle"
+    
+    $caption = "$documentTitle - $officeAppName"
+    
+    # Find the process ID by enumerating windows and matching the document title
+    $script:processId = $null  # Changed to script scope
+    $script:mainWindowHwnd = $null
+    
+    $findWindowCallback = [WindowsAPI+EnumWindowsProc] {
+        param($hwnd, $lparam)
+        
+        if ([WindowsAPI]::IsWindowVisible($hwnd)) {
+            $titleBuilder = New-Object System.Text.StringBuilder 256
+            [WindowsAPI]::GetWindowText($hwnd, $titleBuilder, 256) | Out-Null
+            $windowTitle = $titleBuilder.ToString()
+            
+            # Check if this window contains our document title
+            if ($windowTitle -match [regex]::Escape($caption) -or 
+                ($documentTitle -ne "" -and $windowTitle -match [regex]::Escape($documentTitle))) {  # Fixed to use documentTitle
+                
+                $windowProcessId = 0
+                [void][WindowsAPI]::GetWindowThreadProcessId($hwnd, [ref]$windowProcessId)
+                
+                $script:processId = $windowProcessId
+                $script:mainWindowHwnd = $hwnd
+                
+                Write-Host "Found main window - Title: $windowTitle, Process ID: $windowProcessId"
+                return $false  # Stop enumeration once we find the window
+            }
         }
-        catch {
-            Write-Host "Could not determine the process ID of the Office application."
-            return $false
-        }
+        
+        return $true  # Continue enumeration
     }
     
-    if ($null -eq $processId) {
-        Write-Host "Could not determine the process ID of the Office application."
+    # Find the main application window
+    [void][WindowsAPI]::EnumWindows($findWindowCallback, [IntPtr]::Zero)
+    
+    # If we couldn't find the window by title, try by application caption
+    if ($null -eq $script:processId) {  # Changed to script scope
+        Write-Host "Couldn't find window by document title, trying by application caption..."
         return $false
     }
     
-    Write-Host "Office application process ID: $processId"
+    Write-Host "Office application process ID: $($script:processId)"  # Changed to script scope
     
     # List of common dialog class names and window titles
     $dialogClassNames = @(
@@ -93,7 +118,7 @@ function Detect-OfficeDialog {
             [void][WindowsAPI]::GetWindowThreadProcessId($hwnd, [ref]$windowProcessId)
             
             # If this window belongs to our Office process
-            if ($windowProcessId -eq $processId) {
+            if ($windowProcessId -eq $script:processId) {  # Changed to script scope
                 # Get the class name
                 $classNameBuilder = New-Object System.Text.StringBuilder 256
                 [WindowsAPI]::GetClassName($hwnd, $classNameBuilder, 256) | Out-Null
@@ -118,6 +143,7 @@ function Detect-OfficeDialog {
                         $script:dialogFound = $true
                         Write-Host "Dialog detected - Class: $className, Title: $title"
                         # We could break here, but continue to collect all windows for debugging
+                        return $false # Stop enumeration once we find a dialog
                     }
                 }
                 
@@ -130,6 +156,7 @@ function Detect-OfficeDialog {
                     $title -like "*Visual Basic*") {
                     $script:dialogFound = $true
                     Write-Host "Dialog detected by title - Class: $className, Title: $title"
+                    return $false # Stop enumeration once we find a dialog
                 }
             }
         }
@@ -146,7 +173,7 @@ function Detect-OfficeDialog {
     $foregroundProcessId = 0
     [void][WindowsAPI]::GetWindowThreadProcessId($foregroundWindow, [ref]$foregroundProcessId)
     
-    if ($foregroundProcessId -eq $processId) {
+    if ($foregroundProcessId -eq $script:processId) {  # Changed to script scope
         $classNameBuilder = New-Object System.Text.StringBuilder 256
         [WindowsAPI]::GetClassName($foregroundWindow, $classNameBuilder, 256) | Out-Null
         $className = $classNameBuilder.ToString()
@@ -177,7 +204,8 @@ $officeApp.Visible = $true # Make sure the application is visible
 
 try {
     # Open a document
-    $docPath = "C:\Users\leduc\Workbench\temp_2025\MsgBox-Test.xlsm"
+    $docName = "MsgBox-Test.xlsm" # Change this to the desired document name
+    $docPath = "C:\Users\leduc\Workbench\temp_2025\$docName" # Change this to the desired document path
     if (Test-Path $docPath) {
         $doc = $officeApp.Workbooks.Open($docPath)
         
@@ -195,7 +223,7 @@ try {
         Start-Sleep -Seconds 5
         
         # Check for dialogs
-        $dialogOpen = Detect-OfficeDialog -officeApp $officeApp
+        $dialogOpen = Detect-OfficeDialog -officeAppName $appName -documentTitle $docName
         Write-Host "Is there a dialog open in ${appName}? $dialogOpen"
     }
     else {
