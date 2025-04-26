@@ -566,7 +566,7 @@ function Dismiss-Dialog {
             Write-Host "  Found button with ID $buttonId, text: '$btnText'" -ForegroundColor Gray
             
             # First method: use SendMessage with BM_CLICK
-            [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+            [WindowsAPI]::SendMessage($btnHwnd, [WindowsAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
             Write-Host "  Clicked button with ID $buttonId using SendMessage" -ForegroundColor Green
             
             # Add a small delay to allow the click to process
@@ -579,7 +579,7 @@ function Dismiss-Dialog {
             }
 
             # Try to click the button a second time in case the first attempt failed
-            [DialogAPI]::SendMessage($btnHwnd, [DialogAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+            [WindowsAPI]::SendMessage($btnHwnd, [WindowsAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
             Write-Host "  Clicked button with ID $buttonId again using SendMessage" -ForegroundColor Green
 
             # Check if dialog was dismissed
@@ -588,31 +588,17 @@ function Dismiss-Dialog {
                 return $true
             }
             
-            # Second method: try PostMessage as an alternative
-            Add-Type -TypeDefinition @"
-            using System;
-            using System.Runtime.InteropServices;
-            
-            public static class PostMessageAPI {
-                [DllImport("user32.dll", CharSet = CharSet.Auto)]
-                public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-                
-                public const uint BM_CLICK = 0x00F5;
-                public const uint WM_LBUTTONDOWN = 0x0201;
-                public const uint WM_LBUTTONUP = 0x0202;
-            }
-"@ -ErrorAction SilentlyContinue
-            
-            [PostMessageAPI]::PostMessage($btnHwnd, [PostMessageAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+            # Second method: try PostMessage as an alternative            
+            [WindowsAPI]::PostMessage($btnHwnd, [WindowsAPI]::BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
             Write-Host "  Clicked button with ID $buttonId using PostMessage" -ForegroundColor Green
             
             # Add a slightly longer delay
             Start-Sleep -Milliseconds 150
             
             # Final attempt: simulate mouse clicks
-            [PostMessageAPI]::PostMessage($btnHwnd, [PostMessageAPI]::WM_LBUTTONDOWN, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+            [WindowsAPI]::PostMessage($btnHwnd, [WindowsAPI]::WM_LBUTTONDOWN, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
             Start-Sleep -Milliseconds 50
-            [PostMessageAPI]::PostMessage($btnHwnd, [PostMessageAPI]::WM_LBUTTONUP, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+            [WindowsAPI]::PostMessage($btnHwnd, [WindowsAPI]::WM_LBUTTONUP, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
             Write-Host "  Clicked button with ID $buttonId using simulated mouse click" -ForegroundColor Green
             
             # Mark as successful click attempt
