@@ -6,7 +6,7 @@ branding:
   color: 'blue' 
 
 inputs:
-  sourceDir:
+  source-dir:
     description: 'Relative path to the directory containing the source folders'
     required: false
     default: 'src'
@@ -35,7 +35,7 @@ runs:
       shell: pwsh
     - name: "Run VBA Build"
       shell: pwsh
-      run: '${{ github.action_path }}\Main.ps1 -SourceDir "${{ inputs.sourceDir }}"'
+      run: '${{ github.action_path }}\Main.ps1 -SourceDir "${{ inputs.source-dir }}"'
 outputs:
   result:
     description: "The result of the VBA build process."
