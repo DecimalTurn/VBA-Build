@@ -5,8 +5,9 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName System.Drawing
 
-# Add required Windows API functions
-Add-Type -TypeDefinition @"
+# Try to create the types only if they don't already exist
+if (-not ([System.Management.Automation.PSTypeName]'WindowsAPI').Type) {
+    Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
 
@@ -42,6 +43,14 @@ public class WindowsAPI {
     
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 }
+"@ -ErrorAction SilentlyContinue
+}
+
+# Add ChildWindowAPI separately
+if (-not ([System.Management.Automation.PSTypeName]'ChildWindowAPI').Type) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
 
 public static class ChildWindowAPI {
     [DllImport("user32.dll")]
@@ -49,6 +58,22 @@ public static class ChildWindowAPI {
     public static extern bool EnumChildWindows(IntPtr hWndParent, WindowsAPI.EnumWindowsProc lpEnumFunc, IntPtr lParam);
 }
 "@ -ErrorAction SilentlyContinue
+}
+
+# Add DialogAPI separately
+if (-not ([System.Management.Automation.PSTypeName]'DialogAPI').Type) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class DialogAPI {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+    
+    public const uint BM_CLICK = 0x00F5;
+}
+"@ -ErrorAction SilentlyContinue
+}
 
 function Detect-OfficeDialog {
     param (
@@ -485,19 +510,6 @@ function Dismiss-Dialog {
             "Close" = 8     # IDCLOSE
             "Help" = 9      # IDHELP
         }
-        
-        # Add SendMessage to DialogAPI if it doesn't exist
-        Add-Type -TypeDefinition @"
-        using System;
-        using System.Runtime.InteropServices;
-        
-        public static class DialogAPI {
-            [DllImport("user32.dll", CharSet = CharSet.Auto)]
-            public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-            
-            public const uint BM_CLICK = 0x00F5;
-        }
-"@ -ErrorAction SilentlyContinue
         
         # Try the standard button ID first
         if ($buttonIds.ContainsKey($buttonToClick)) {
