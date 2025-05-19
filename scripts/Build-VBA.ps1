@@ -36,6 +36,10 @@ $fileExtension = $fileName.Substring($fileName.LastIndexOf('.') + 1)
 $outputDir = (DirUp $srcDir) + "out/"
 $outputFilePath = $outputDir + $fileName
 
+if ($outputFilePath.EndsWith(".xlsb")) {
+    $outputFilePath = $outputFilePath -replace "\.xlsb$", ".xlsb.xlsm"
+}
+
 # Make sure the output file already exists
 if (-not (Test-Path $outputFilePath)) {
     Write-Host "🔴 Error: Output file not found: $outputFilePath"
@@ -116,7 +120,10 @@ if ($null -eq $doc) {
     Write-Host "🔴 Error: Failed to open the document: $outputFilePath"
     Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
     exit 1
+} else {
+    Write-Host "Document opened successfully: $outputFilePath"
 }
+
 
 # Define the module folder path
 
@@ -250,6 +257,20 @@ try {
         # For PowerPoint, use SaveAs with the same file name to force save
         $doc.SaveAs($outputFilePath)
         Write-Host "Document saved using SaveAs method"
+    } elseif ($officeAppName -eq "Excel") {
+        # For Excel, we need to check if the file name ends with .xlsb.xlsm
+        # If so, we need to save as .xlsb
+        if ($outputFilePath.EndsWith(".xlsb.xlsm")) {
+            $newFilePath = $outputFilePath -replace "\.xlsb\.xlsm$", ".xlsb"
+            # Replace forward slashes with backslashes
+            $newFilePath = $newFilePath -replace "/", "\"
+            Write-Host "Saving document as .xlsb: $newFilePath"
+            $doc.SaveAs($newFilePath, 50) # 50 is the xlExcel12 file format for .xlsb
+            Write-Host "Document saved as .xlsb"
+        } else {
+            $doc.Save()
+            Write-Host "Document saved successfully"
+        }
     } else {
         $doc.Save()
         Write-Host "Document saved successfully"
