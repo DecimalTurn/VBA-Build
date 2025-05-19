@@ -334,37 +334,7 @@ try {
     Write-Host "🟡 Warning: Could not execute macro ${macroName}: $($_.Exception.Message)"
 }
 
-# Display the VBE to activate the Rubberduck COM add-in
-$officeApp.CommandBars.ExecuteMso("VisualBasic")
-
-# Wait for a moment to ensure the VBE is fully loaded
-Start-Sleep -Seconds 2
-. "$scriptPath/Tests-Rubberduck-VBA.ps1"
-
-# Now perform all tests using Rubberduck
-# Replace the existing Rubberduck test block with this:
-$rubberduckTestResult = Test-WithRubberduck -officeApp $officeApp
-if (-not $rubberduckTestResult) {
-    Write-Host "Rubberduck tests were not completed successfully, but continuing with the script..."
-}
-
-# Close the document
-try {
-    $doc.Close($false) # Close without saving changes
-    Write-Host "Document closed successfully"
-} catch {
-    Write-Host "Warning: Could not close document: $($_.Exception.Message)"
-}
-
-# Quit the application
-try {
-    $officeApp.Quit()
-    Write-Host "Application closed successfully"
-} catch {
-    Write-Host "Warning: Could not quit application: $($_.Exception.Message)"
-}
-
-# Clean up COM objects safely
+# Clean-Up: Release the document
 try {
     if ($null -ne $doc -and $doc.GetType().IsCOMObject) {
         [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
@@ -374,13 +344,4 @@ try {
     Write-Host "Warning: Error releasing document COM object: $($_.Exception.Message)"
 }
 
-try {
-    if ($null -ne $officeApp -and $officeApp.GetType().IsCOMObject) {
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
-        Write-Host "Released application COM object"
-    }
-} catch {
-    Write-Host "Warning: Error releasing application COM object: $($_.Exception.Message)"
-}
 
-Write-Host "VBA import completed successfully."

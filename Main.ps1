@@ -1,6 +1,7 @@
 # Get the source directory from command line argument or use default "src"
 param(
-    [string]$SourceDir = "src"
+    [string]$SourceDir = "src",
+    [string]$testFramework = "none" # Default to "none" if not specified
 )
 
 Write-Host "Current directory: $(pwd)"
@@ -54,9 +55,14 @@ Write-Host "Open and close Office applications"
 . "$PSScriptRoot/scripts/Open-Close-Office.ps1" $officeApps
 Write-Host "========================="
 
-Write-Host "Install Rubberduck"
-. "$PSScriptRoot/scripts/Install-Rubberduck-VBA.ps1"
-Write-Host "========================="
+
+if ($testFramework -ieq "rubberduck") {
+    Write-Host "Install Rubberduck"
+    . "$PSScriptRoot/scripts/Install-Rubberduck-VBA.ps1"
+    Write-Host "========================="
+} else {
+    Write-Host "Test framework is not Rubberduck. Skipping installation."
+}
 
 # Enable VBOM for each Office application
 Write-Host "Enabling VBOM for Office applications"
@@ -90,6 +96,19 @@ foreach ($folder in $folders) {
 
     Write-Host "Importing VBA code into Office document" 
     . "$PSScriptRoot/scripts/Build-VBA.ps1" "${SourceDir}/${folder}" "$app"
+
+    if ($testFramework -ieq "rubberduck") {
+        Write-Host "Running tests with Rubberduck"
+        $rubberduckTestResult = Test-WithRubberduck -officeApp $officeApp
+        if (-not $rubberduckTestResult) {
+            Write-Host "Rubberduck tests were not completed successfully, but continuing with the script..."
+        }
+    } else {
+        Write-Host "Test framework is not Rubberduck. Skipping tests."
+    }
+
+    Write-Host "Cleaning up"
+    CleanUp-OfficeApp -officeApp $officeApp
 
     Write-Host "========================="
 }

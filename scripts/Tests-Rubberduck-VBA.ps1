@@ -5,6 +5,12 @@ function Test-WithRubberduck {
         $officeApp
     )
     
+    # Display the VBE to activate the Rubberduck COM add-in
+    $officeApp.CommandBars.ExecuteMso("VisualBasic")
+
+    # Wait for a moment to ensure the VBE is fully loaded
+    Start-Sleep -Seconds 2
+
     $rubberduckAddin = $null
     $rubberduck = $null
     try {
