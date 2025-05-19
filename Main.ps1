@@ -1,6 +1,7 @@
 # Get the source directory from command line argument or use default "src"
 param(
-    [string]$SourceDir = "src"
+    [string]$SourceDir = "src",
+    [string]$TestFramework = "none" # Default to "none" if not specified
 )
 
 Write-Host "Current directory: $(pwd)"
@@ -54,7 +55,17 @@ Write-Host "Open and close Office applications"
 . "$PSScriptRoot/scripts/Open-Close-Office.ps1" $officeApps
 Write-Host "========================="
 
+
+if ($TestFramework -ieq "rubberduck") {
+    Write-Host "Install Rubberduck"
+    . "$PSScriptRoot/scripts/Install-Rubberduck-VBA.ps1"
+    Write-Host "========================="
+} else {
+    Write-Host "Test framework is not Rubberduck. Skipping installation."
+}
+
 # Enable VBOM for each Office application
+Write-Host "Enabling VBOM for Office applications"
 foreach ($app in $officeApps) {
     Write-Host "Enabling VBOM for $app"
     . "$PSScriptRoot/scripts/Enable-VBOM.ps1" $app
@@ -64,6 +75,11 @@ foreach ($app in $officeApps) {
 # To get better screenshots we need to minimize the "Administrator" CMD window
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/scripts/utils/Minimize.ps1"
+
+
+# Import scripts
+. "$PSScriptRoot/scripts/Tests-Rubberduck-VBA.ps1" # Import the Rubberduck testing script
+. "$PSScriptRoot/scripts/Clean-Up.ps1" # Import the Clean-Up.ps1 script
 
 Minimize-Window "Administrator: C:\actions"
 Write-Host "========================="
@@ -85,6 +101,19 @@ foreach ($folder in $folders) {
 
     Write-Host "Importing VBA code into Office document" 
     . "$PSScriptRoot/scripts/Build-VBA.ps1" "${SourceDir}/${folder}" "$app"
+
+    if ($TestFramework -ieq "rubberduck") {
+        Write-Host "Running tests with Rubberduck"
+        $rubberduckTestResult = Test-WithRubberduck -officeApp $officeApp
+        if (-not $rubberduckTestResult) {
+            Write-Host "Rubberduck tests were not completed successfully, but continuing with the script..."
+        }
+    } else {
+        Write-Host "Test framework is not Rubberduck. Skipping tests."
+    }
+
+    Write-Host "Cleaning up"
+    CleanUp-OfficeApp -officeApp $officeApp
 
     Write-Host "========================="
 }

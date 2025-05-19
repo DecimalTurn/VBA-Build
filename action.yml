@@ -6,10 +6,14 @@ branding:
   color: 'blue' 
 
 inputs:
-  sourceDir:
+  source-dir:
     description: 'Relative path to the directory containing the source folders'
     required: false
     default: 'src'
+  test-framework:
+    description: 'The test framework to use for the build process.'
+    required: false
+    default: 'none'
 
 runs:
   using: "composite"
@@ -19,11 +23,23 @@ runs:
       run: choco install 7zip.install
     # https://community.chocolatey.org/packages?q=Excel
     - name: "Installing Office 365 (takes about 5 minutes...)"
+      id: "install_office"
       shell: pwsh
       run: choco install office365proplus -y
+    - name: "Display Chocolatey logs in case of Office install failure"
+      if: failure() && steps.install_office.outcome == 'failure'
+      run: |
+        if (Test-Path -Path "C:\ProgramData\chocolatey\logs\chocolatey.log") {
+          Write-Host "============ Chocolatey Log Contents ============"
+          Get-Content -Path "C:\ProgramData\chocolatey\logs\chocolatey.log"
+          Write-Host "============ End of Chocolatey Logs ============="
+        } else {
+          Write-Host "Chocolatey log file not found at C:\ProgramData\chocolatey\logs\chocolatey.log"
+        }
+      shell: pwsh
     - name: "Run VBA Build"
       shell: pwsh
-      run: '${{ github.action_path }}\Main.ps1 -SourceDir "${{ inputs.sourceDir }}"'
+      run: '${{ github.action_path }}\Main.ps1 -SourceDir "${{ inputs.source-dir }}" -TestFramework "${{ inputs.test-framework }}"'
 outputs:
   result:
     description: "The result of the VBA build process."

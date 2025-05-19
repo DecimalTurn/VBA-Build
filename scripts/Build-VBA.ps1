@@ -246,10 +246,10 @@ Minimize-Window "Choose a theme"
 # Save the document
 Write-Host "Saving document..."
 try {
-    if ($officeAppName -eq "PowerPoint") {
+    if ($officeAppName -eq "PowerPoint" -or $officeAppName -eq "Word") {
         # For PowerPoint, use SaveAs with the same file name to force save
         $doc.SaveAs($outputFilePath)
-        Write-Host "PowerPoint presentation saved using SaveAs method"
+        Write-Host "Document saved using SaveAs method"
     } else {
         $doc.Save()
         Write-Host "Document saved successfully"
@@ -293,6 +293,7 @@ try {
     }
 }
 
+# Generic test
 # Call the WriteToFile macro to check if the module was imported correctly
 try {
     
@@ -331,26 +332,9 @@ try {
 } catch {
     Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
     Write-Host "🟡 Warning: Could not execute macro ${macroName}: $($_.Exception.Message)"
-    
 }
 
-# Close the document
-try {
-    $doc.Close()
-    Write-Host "Document closed successfully"
-} catch {
-    Write-Host "Warning: Could not close document: $($_.Exception.Message)"
-}
-
-# Quit the application
-try {
-    $officeApp.Quit()
-    Write-Host "Application closed successfully"
-} catch {
-    Write-Host "Warning: Could not quit application: $($_.Exception.Message)"
-}
-
-# Clean up COM objects safely
+# Clean-Up: Release the document
 try {
     if ($null -ne $doc -and $doc.GetType().IsCOMObject) {
         [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
@@ -360,19 +344,4 @@ try {
     Write-Host "Warning: Error releasing document COM object: $($_.Exception.Message)"
 }
 
-try {
-    if ($null -ne $officeApp -and $officeApp.GetType().IsCOMObject) {
-        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
-        Write-Host "Released application COM object"
-    }
-} catch {
-    Write-Host "Warning: Error releasing application COM object: $($_.Exception.Message)"
-}
 
-# Force garbage collection to ensure COM objects are properly released
-[System.GC]::Collect()
-[System.GC]::WaitForPendingFinalizers()
-
-# Clean up variables
-Remove-Variable -Name doc, officeApp -ErrorAction SilentlyContinue
-Write-Host "VBA import completed successfully."

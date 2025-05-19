@@ -20,19 +20,9 @@ jobs:
         id: build_vba
         uses: ./
         with:
-          sourceDir: "./tests"
-        timeout-minutes: 10
-      - name: "Display Chocolatey logs in case of Office install failure"
-        if: failure() && steps.build_vba.outcome == 'failure'
-        run: |
-          if (Test-Path -Path "C:\ProgramData\chocolatey\logs\chocolatey.log") {
-            Write-Host "============ Chocolatey Log Contents ============"
-            Get-Content -Path "C:\ProgramData\chocolatey\logs\chocolatey.log"
-            Write-Host "================================================="
-          } else {
-            Write-Host "Chocolatey log file not found at C:\ProgramData\chocolatey\logs\chocolatey.log"
-          }
-        shell: pwsh
+          source-dir: "./tests"
+          test-framework: "rubberduck"
+        timeout-minutes: 20
       - name: "Upload Build Artifact"
         uses: actions/upload-artifact@v4
         id: "upload"
