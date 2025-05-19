@@ -39,7 +39,7 @@ runs:
       shell: pwsh
     - name: "Run VBA Build"
       shell: pwsh
-      run: '${{ github.action_path }}\Main.ps1 -SourceDir "${{ inputs.source-dir }}"'
+      run: '${{ github.action_path }}\Main.ps1 -SourceDir "${{ inputs.source-dir }}" -TestFramework "${{ inputs.test-framework }}"'
 outputs:
   result:
     description: "The result of the VBA build process."

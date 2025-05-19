@@ -76,6 +76,11 @@ foreach ($app in $officeApps) {
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/scripts/utils/Minimize.ps1"
 
+
+# Import scripts
+. "$PSScriptRoot/scripts/Tests-Rubberduck-VBA.ps1" # Import the Rubberduck testing script
+. "$PSScriptRoot/scripts/Clean-Up.ps1" # Import the Clean-Up.ps1 script
+
 Minimize-Window "Administrator: C:\actions"
 Write-Host "========================="
 
