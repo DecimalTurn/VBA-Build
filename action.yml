@@ -10,6 +10,10 @@ inputs:
     description: 'Relative path to the directory containing the source folders'
     required: false
     default: 'src'
+  test-framework:
+    description: 'The test framework to use for the build process.'
+    required: false
+    default: 'none'
 
 runs:
   using: "composite"

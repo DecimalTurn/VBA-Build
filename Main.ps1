@@ -1,7 +1,7 @@
 # Get the source directory from command line argument or use default "src"
 param(
     [string]$SourceDir = "src",
-    [string]$testFramework = "none" # Default to "none" if not specified
+    [string]$TestFramework = "none" # Default to "none" if not specified
 )
 
 Write-Host "Current directory: $(pwd)"
@@ -56,7 +56,7 @@ Write-Host "Open and close Office applications"
 Write-Host "========================="
 
 
-if ($testFramework -ieq "rubberduck") {
+if ($TestFramework -ieq "rubberduck") {
     Write-Host "Install Rubberduck"
     . "$PSScriptRoot/scripts/Install-Rubberduck-VBA.ps1"
     Write-Host "========================="
@@ -97,7 +97,7 @@ foreach ($folder in $folders) {
     Write-Host "Importing VBA code into Office document" 
     . "$PSScriptRoot/scripts/Build-VBA.ps1" "${SourceDir}/${folder}" "$app"
 
-    if ($testFramework -ieq "rubberduck") {
+    if ($TestFramework -ieq "rubberduck") {
         Write-Host "Running tests with Rubberduck"
         $rubberduckTestResult = Test-WithRubberduck -officeApp $officeApp
         if (-not $rubberduckTestResult) {
