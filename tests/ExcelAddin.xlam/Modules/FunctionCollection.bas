@@ -3,7 +3,7 @@ Option Explicit
 
 'Source: https://www.youtube.com/watch?v=sR8ZM0XUXdk
 
-'@Description("This will make a valid constant name according to covention")
+'@Description("This will make a valid constant name according to convention")
 '@Dependency("IsCapitalLetter function")
 '@ExampleCall : MakeValidConstName("SettingsTable") >> SETTINGS_TABLE
 '@Date : 14 October 2021 08:05:41 PM
