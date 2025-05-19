@@ -65,6 +65,8 @@ function Test-WithRubberduck {
             foreach ($line in $results) {
                 if ($line -match "Succeeded") {
                     Write-Host "✅ $line"
+                } elseif ($line -match "🟡 No tests were run") {
+                    Write-Host "$line"
                 } else {
                     Write-Host "❌ $line"
                 }
