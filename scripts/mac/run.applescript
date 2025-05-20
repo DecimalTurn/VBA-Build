@@ -75,4 +75,4 @@ on run_excel_macro(command, args)
 	end tell
 
 	return result
-end run_macro
+end run_excel_macro

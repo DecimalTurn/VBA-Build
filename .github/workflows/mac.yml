@@ -93,6 +93,7 @@ jobs:
           screencapture -x screenshots/excel_opened.png
         shell: bash
       - name: "Run Excel Macro"
+        timeout-minutes: 5
         run: |
           # Debug: Show current directory and list contents of key directories
           pwd
@@ -180,7 +181,6 @@ jobs:
             fi
           fi
         shell: bash
-        timeout-minutes: 5
       - name: "Take exiting screenshot"
         if: always()
         run: |
