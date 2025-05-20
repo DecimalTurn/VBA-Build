@@ -89,7 +89,7 @@ function Test-WithRubberduck {
         return $true
     }
     catch {
-        Write-Host "🔴 Error: Could not access Rubberduck add-in: $($_.Exception.Message)"
+        Write-Host "🔴 Error while using Rubberduck add-in on line $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.Message)"
         return $false
     }
 }
