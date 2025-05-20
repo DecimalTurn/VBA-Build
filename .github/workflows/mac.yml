@@ -36,45 +36,87 @@ jobs:
         shell: bash
       - name: "Configure AppleScript Permissions"
         run: |
-          # Create a TCC directory if it doesn't exist
-          sudo mkdir -p /Library/Application\ Support/com.apple.TCC
+          # Alternative approach using privacy settings directly
+          # Try to enable automation permissions using tccutil (may require Full Disk Access)
+          sudo sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db "SELECT * FROM access LIMIT 1" || echo "Failed to query TCC database, may need different approach"
           
-          # Grant permissions for automation to control apps
-          # This creates a database file with pre-approved automation permissions
-          cat << EOF > /tmp/tcc.sql
-          CREATE TABLE access (service TEXT,client TEXT,client_type INTEGER,allowed INTEGER,prompt_count INTEGER,csreq BLOB,policy_id INTEGER,indirect_object_identifier_type INTEGER,indirect_object_identifier TEXT,indirect_object_code_identity BLOB,flags INTEGER,last_modified TIMESTAMP);
-          INSERT INTO access VALUES('kTCCServiceAppleEvents','/usr/sbin/sshd',1,1,1,NULL,NULL,0,'com.microsoft.Excel',NULL,NULL,NULL);
-          INSERT INTO access VALUES('kTCCServiceAppleEvents','/usr/bin/osascript',0,1,1,NULL,NULL,0,'com.microsoft.Excel',NULL,NULL,NULL);
-          INSERT INTO access VALUES('kTCCServiceAppleEvents','com.microsoft.autoupdate2',0,1,1,NULL,NULL,0,'com.microsoft.Excel',NULL,NULL,NULL);
-          EOF
+          # Grant Screen Recording permission (needed for screenshots and sometimes for automation)
+          sudo sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR REPLACE INTO access VALUES('kTCCServiceScreenCapture','com.apple.screencapture',1,1,1,NULL,NULL,NULL,'UNUSED',NULL,0,1.0,NULL,NULL,NULL,0,NULL,NULL,NULL,'UNUSED',NULL,0,0,0,NULL);" 2>/dev/null || echo "Failed to add screen capture permission"
           
-          # Apply the permissions by creating/replacing the TCC database
-          sudo sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db < /tmp/tcc.sql
+          # Enable Accessibility features (alternative approach)
+          sudo touch /private/var/db/.AccessibilityAPIEnabled
           
-          # Set ownership and permissions for the TCC database
-          sudo chown root:wheel /Library/Application\ Support/com.apple.TCC/TCC.db
-          sudo chmod 644 /Library/Application\ Support/com.apple.TCC/TCC.db
+          # Create the Privacy folder structure
+          sudo mkdir -p /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles
           
-          # Create the provisioner trust file
-          # This bypasses the "provisioner" requests access dialog
-          echo '<?xml version="1.0" encoding="UTF-8"?>
+          # Create and write a tcc_db.xml file for tccprofile
+          cat << EOF > /tmp/tcc_db.xml
+          <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-              <key>Authorization</key>
-              <dict>
-                  <key>AppleEvents</key>
-                  <array>
-                      <string>com.microsoft.Excel</string>
-                  </array>
-              </dict>
+              <key>PayloadContent</key>
+              <array>
+                  <dict>
+                      <key>PayloadDescription</key>
+                      <string>Allows AppleScript to control applications</string>
+                      <key>PayloadDisplayName</key>
+                      <string>AppleEvents Permissions</string>
+                      <key>PayloadIdentifier</key>
+                      <string>com.github.actions.tcc.apple-events</string>
+                      <key>PayloadType</key>
+                      <string>com.apple.TCC.configuration-profile-policy</string>
+                      <key>PayloadUUID</key>
+                      <string>$(uuidgen)</string>
+                      <key>PayloadVersion</key>
+                      <integer>1</integer>
+                      <key>Services</key>
+                      <dict>
+                          <key>AppleEvents</key>
+                          <array>
+                              <dict>
+                                  <key>AEReceiverIdentifier</key>
+                                  <string>com.microsoft.Excel</string>
+                                  <key>AEReceiverIdentifierType</key>
+                                  <string>bundleID</string>
+                                  <key>Allowed</key>
+                                  <true/>
+                                  <key>CodeRequirement</key>
+                                  <string>identifier "com.apple.osascript" and anchor apple</string>
+                                  <key>IdentifierType</key>
+                                  <string>path</string>
+                                  <key>IdentifierValue</key>
+                                  <string>/usr/bin/osascript</string>
+                              </dict>
+                          </array>
+                      </dict>
+                  </dict>
+              </array>
+              <key>PayloadDescription</key>
+              <string>Allows AppleScript to control applications</string>
+              <key>PayloadDisplayName</key>
+              <string>AppleEvents Permissions</string>
+              <key>PayloadIdentifier</key>
+              <string>com.github.actions.tcc</string>
+              <key>PayloadOrganization</key>
+              <string>GitHub</string>
+              <key>PayloadScope</key>
+              <string>System</string>
+              <key>PayloadType</key>
+              <string>Configuration</string>
+              <key>PayloadUUID</key>
+              <string>$(uuidgen)</string>
+              <key>PayloadVersion</key>
+              <integer>1</integer>
           </dict>
-          </plist>' | sudo tee /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles/global.provisionprofile > /dev/null
+          </plist>
+          EOF
           
-          # Set ownership and permissions for the provisioning profile
-          sudo mkdir -p /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles
-          sudo chown root:wheel /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles/global.provisionprofile
-          sudo chmod 644 /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles/global.provisionprofile
+          # Install the profile
+          sudo profiles -I -F /tmp/tcc_db.xml || echo "Profiles command not available, proceeding anyway"
+          
+          # Grant scripts executable permissions in case needed
+          chmod +x "$GITHUB_WORKSPACE/scripts/mac/run.applescript"
         shell: bash
       - name: "Run Excel Macro"
         run: |
