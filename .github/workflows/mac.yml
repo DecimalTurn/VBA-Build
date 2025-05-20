@@ -20,7 +20,40 @@ jobs:
           # macOS Office installers: https://github.com/alsyundawy/Microsoft-Office-For-MacOS
           # Download the Office installer from: https://go.microsoft.com/fwlink/?linkid=525133
           curl -L "https://go.microsoft.com/fwlink/?linkid=525133" -o microsoft_office_installer.pkg
-          sudo installer -pkg microsoft_office_installer.pkg -target /
+          
+          # Create a choices XML file to disable Microsoft AutoUpdate and suppress dialogs
+          cat > choices.xml << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <array>
+              <dict>
+                <key>choiceAttribute</key>
+                <string>customLocation</string>
+                <key>attributeSetting</key>
+                <string>/Applications</string>
+                <key>choiceIdentifier</key>
+                <string>com.microsoft.autoupdate</string>
+              </dict>
+              <dict>
+                <key>choiceAttribute</key>
+                <string>visible</string>
+                <key>attributeSetting</key>
+                <false/>
+                <key>choiceIdentifier</key>
+                <string>com.microsoft.autoupdate</string>
+              </dict>
+            </array>
+          </plist>
+          EOF
+          
+          # Install Office using the choices file to suppress dialogs
+          sudo installer -pkg microsoft_office_installer.pkg -target / -applyChoiceChangesXML choices.xml
+          
+          # Disable Microsoft AutoUpdate after installation
+          defaults write com.microsoft.autoupdate2 SendAllTelemetryEnabled -bool FALSE
+          defaults write com.microsoft.autoupdate2 DisableInsiderCheckbox -bool TRUE
+          defaults write com.microsoft.autoupdate2 HowToCheck -string "Manual"
         shell: bash
       - name: "Take exiting screenshot"
         if: always()
