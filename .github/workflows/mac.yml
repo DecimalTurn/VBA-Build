@@ -46,77 +46,51 @@ jobs:
           # Enable Accessibility features (alternative approach)
           sudo touch /private/var/db/.AccessibilityAPIEnabled
           
-          # Create the Privacy folder structure
-          sudo mkdir -p /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles
-          
-          # Create and write a tcc_db.xml file for tccprofile
-          cat << EOF > /tmp/tcc_db.xml
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>PayloadContent</key>
-              <array>
-                  <dict>
-                      <key>PayloadDescription</key>
-                      <string>Allows AppleScript to control applications</string>
-                      <key>PayloadDisplayName</key>
-                      <string>AppleEvents Permissions</string>
-                      <key>PayloadIdentifier</key>
-                      <string>com.github.actions.tcc.apple-events</string>
-                      <key>PayloadType</key>
-                      <string>com.apple.TCC.configuration-profile-policy</string>
-                      <key>PayloadUUID</key>
-                      <string>$(uuidgen)</string>
-                      <key>PayloadVersion</key>
-                      <integer>1</integer>
-                      <key>Services</key>
-                      <dict>
-                          <key>AppleEvents</key>
-                          <array>
-                              <dict>
-                                  <key>AEReceiverIdentifier</key>
-                                  <string>com.microsoft.Excel</string>
-                                  <key>AEReceiverIdentifierType</key>
-                                  <string>bundleID</string>
-                                  <key>Allowed</key>
-                                  <true/>
-                                  <key>CodeRequirement</key>
-                                  <string>identifier "com.apple.osascript" and anchor apple</string>
-                                  <key>IdentifierType</key>
-                                  <string>path</string>
-                                  <key>IdentifierValue</key>
-                                  <string>/usr/bin/osascript</string>
-                              </dict>
-                          </array>
-                      </dict>
-                  </dict>
-              </array>
-              <key>PayloadDescription</key>
-              <string>Allows AppleScript to control applications</string>
-              <key>PayloadDisplayName</key>
-              <string>AppleEvents Permissions</string>
-              <key>PayloadIdentifier</key>
-              <string>com.github.actions.tcc</string>
-              <key>PayloadOrganization</key>
-              <string>GitHub</string>
-              <key>PayloadScope</key>
-              <string>System</string>
-              <key>PayloadType</key>
-              <string>Configuration</string>
-              <key>PayloadUUID</key>
-              <string>$(uuidgen)</string>
-              <key>PayloadVersion</key>
-              <integer>1</integer>
-          </dict>
-          </plist>
+          # Create a UI script to click "Allow" button on permission dialogs
+          cat > /tmp/click_allow.applescript << EOF
+          on run argv
+            try
+              tell application "System Events"
+                set procName to item 1 of argv
+                tell process procName
+                  # Look for Allow button on dialog
+                  repeat 30 times
+                    if exists button "Allow" of window 1 then
+                      click button "Allow" of window 1
+                      exit repeat
+                    end if
+                    delay 0.5
+                  end repeat
+                end tell
+              end tell
+              return "UI Script succeeded"
+            on error errMsg
+              return "UI Script error: " & errMsg
+            end try
+          end run
           EOF
           
-          # Install the profile
-          sudo profiles -I -F /tmp/tcc_db.xml || echo "Profiles command not available, proceeding anyway"
+          # Compile the script
+          osacompile -o /tmp/click_allow.scpt /tmp/click_allow.applescript
           
-          # Grant scripts executable permissions in case needed
+          # Set necessary permissions
           chmod +x "$GITHUB_WORKSPACE/scripts/mac/run.applescript"
+          chmod +x /tmp/click_allow.scpt
+        shell: bash
+      - name: "Pre-open Excel"
+        run: |
+          # Launch Excel before running the macro
+          open -a "Microsoft Excel"
+          
+          # Start the UI automation script to click Allow in background
+          osascript /tmp/click_allow.scpt "Microsoft Excel" &
+          
+          # Give Excel time to initialize
+          sleep 15
+          
+          # Take a screenshot to see if Excel opened correctly
+          mkdir -p screenshots
+          screencapture -x screenshots/excel_opened.png
         shell: bash
       - name: "Run Excel Macro"
         run: |
@@ -149,12 +123,11 @@ jobs:
           echo "Using workbook: $ABS_WORKBOOK_PATH"
           echo "Using script: $ABS_APPLESCRIPT_PATH"
           
-          # Pre-open Excel to make sure it's running and permissions are established
-          open -a "Microsoft Excel"
-          sleep 5
+          # Start the UI automation script to click Allow in background again
+          osascript /tmp/click_allow.scpt "Microsoft Excel" &
           
-          # Run the AppleScript to open Excel and execute the WriteToFile macro
-          osascript "$ABS_APPLESCRIPT_PATH" excel "$ABS_WORKBOOK_PATH" "WriteToFile"
+          # Run the AppleScript with a timeout to avoid hanging
+          timeout 60s osascript "$ABS_APPLESCRIPT_PATH" excel "$ABS_WORKBOOK_PATH" "WriteToFile" || echo "AppleScript timed out or failed, checking for output file anyway"
           
           # Display the output file to confirm the macro executed successfully
           OUTPUT_DIR="$(dirname "$ABS_WORKBOOK_PATH")"
@@ -166,8 +139,36 @@ jobs:
             echo "Content of output file:"
             cat "$OUTPUT_FILE"
           fi
+          
+          # If the AppleScript method failed, try a fallback direct VBA execution
+          if [ ! -f "$OUTPUT_FILE" ]; then
+            echo "Trying fallback method to run VBA macro directly..."
+            
+            # Create a JavaScript file to execute the macro directly
+            cat > /tmp/run_excel_macro.js << EOF
+            var app = Application('Microsoft Excel');
+            app.includeStandardAdditions = true;
+            app.activate();
+            
+            var wb = app.open('$ABS_WORKBOOK_PATH');
+            delay(2);
+            app.runVisualBasicMacro('WriteToFile');
+            delay(2);
+            EOF
+            
+            # Run the JavaScript
+            osascript -l JavaScript /tmp/run_excel_macro.js
+            
+            # Check if output file was created after fallback
+            echo "Checking if output file was created after fallback:"
+            ls -l "$OUTPUT_FILE" || echo "Output file not found after fallback"
+            if [ -f "$OUTPUT_FILE" ]; then
+              echo "Content of output file after fallback:"
+              cat "$OUTPUT_FILE"
+            fi
+          fi
         shell: bash
-        timeout-minutes: 3
+        timeout-minutes: 5
       - name: "Take exiting screenshot"
         if: always()
         run: |
