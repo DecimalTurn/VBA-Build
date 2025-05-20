@@ -46,24 +46,46 @@ jobs:
           # Enable Accessibility features (alternative approach)
           sudo touch /private/var/db/.AccessibilityAPIEnabled
           
-          # Create a UI script to click "Allow" button on permission dialogs
+          # Create a more aggressive UI script to click "Allow" button on permission dialogs
           cat > /tmp/click_allow.applescript << 'EOF'
           on run argv
             try
               tell application "System Events"
-                set procName to item 1 of argv
-                tell process procName
-                  -- Look for Allow button on dialog
-                  repeat 30 times
-                    if exists button "Allow" of window 1 then
-                      click button "Allow" of window 1
-                      exit repeat
-                    end if
-                    delay 0.5
+                -- Look for any UI elements containing "Allow" or "OK" regardless of process
+                repeat 60 times
+                  -- Try to find any visible dialog or sheet
+                  set allProcesses to application processes where it is visible
+                  
+                  repeat with proc in allProcesses
+                    try
+                      -- Check for "Allow" buttons
+                      tell proc
+                        set allWindows to every window
+                        repeat with win in allWindows
+                          try
+                            if exists (button "Allow" of win) then
+                              click button "Allow" of win
+                              delay 0.5
+                            end if
+                            if exists (button "OK" of win) then
+                              click button "OK" of win
+                              delay 0.5
+                            end if
+                            if exists (button "Always Allow" of win) then
+                              click button "Always Allow" of win
+                              delay 0.5
+                            end if
+                          end try
+                        end repeat
+                      end tell
+                    end try
                   end repeat
-                end tell
+                  
+                  delay 0.5
+                end repeat
+                
+                return "UI Script completed"
               end tell
-              return "UI Script succeeded"
             on error errMsg
               return "UI Script error: " & errMsg
             end try
@@ -78,16 +100,52 @@ jobs:
           chmod +x "$GITHUB_WORKSPACE/scripts/mac/direct_excel_macro.applescript"
           chmod +x /tmp/click_allow.scpt
         shell: bash
-      - name: "Pre-open Excel"
+      - name: "Update AppleScript for Excel"
+        run: |
+          # Create a very simplified AppleScript just to open Excel and run a macro
+          cat > /tmp/run_simple_macro.applescript << 'EOF'
+          on run argv
+              set workbookPath to item 1 of argv
+              set macroName to item 2 of argv
+              
+              tell application "Microsoft Excel"
+                  activate
+                  delay 3
+                  
+                  -- Open workbook
+                  try
+                      open workbook workbook file name workbookPath
+                      delay 3
+                      
+                      -- Run the macro
+                      try
+                          run VB macro macroName
+                          return "Macro executed successfully"
+                      on error macroError
+                          return "Error running macro: " & macroError
+                      end try
+                  on error openError
+                      return "Error opening workbook: " & openError
+                  end try
+              end tell
+          end run
+          EOF
+          
+          # Compile the script
+          osacompile -o /tmp/run_simple_macro.scpt /tmp/run_simple_macro.applescript
+          chmod +x /tmp/run_simple_macro.scpt
+        shell: bash
+      - name: "Pre-open Excel and dismiss dialogs"
         run: |
           # Launch Excel before running the macro
           open -a "Microsoft Excel"
           
           # Start the UI automation script to click Allow in background
-          osascript /tmp/click_allow.scpt "Microsoft Excel" &
+          # Run for a longer time to make sure it catches dialogs
+          /tmp/click_allow.scpt &
           
-          # Give Excel time to initialize
-          sleep 15
+          # Give Excel time to initialize and dismiss dialogs
+          sleep 20
           
           # Take a screenshot to see if Excel opened correctly
           mkdir -p screenshots
@@ -116,44 +174,53 @@ jobs:
           
           echo "Using workbook: $ABS_WORKBOOK_PATH"
           
-          # Start the UI automation script to click Allow in background again
-          osascript /tmp/click_allow.scpt "Microsoft Excel" &
-          osascript /tmp/click_allow.scpt "System Events" &
+          # Run the dialog dismisser in background again
+          /tmp/click_allow.scpt &
           
-          echo "Running simplified direct AppleScript approach with SimpleTest macro..."
-          osascript "$GITHUB_WORKSPACE/scripts/mac/direct_excel_macro.applescript" "$ABS_WORKBOOK_PATH" "SimpleTest" || echo "AppleScript failed running SimpleTest, trying JavaScript approach..."
+          # Try the new simpler AppleScript approach
+          echo "Running very simple AppleScript approach with SimpleTest macro..."
+          result=$(/tmp/run_simple_macro.scpt "$ABS_WORKBOOK_PATH" "SimpleTest" 2>&1)
+          echo "AppleScript result: $result"
           
-          # Note: Since SimpleTest only writes to the immediate window, we can't check for a file
-          # Just indicate that we attempted to run the macro
-          echo "SimpleTest macro execution attempted through AppleScript."
-          
+          # Try the JavaScript approach
           echo "Trying JavaScript approach with SimpleTest macro..."
-          # Create a JavaScript file to execute the SimpleTest macro directly
+          # Create a JavaScript file that properly handles arguments
           cat > /tmp/run_excel_macro.js << 'EOF'
-          var app = Application('Microsoft Excel');
-          app.includeStandardAdditions = true;
-          app.activate();
+          #!/usr/bin/env osascript -l JavaScript
           
-          try {
-            var wb = app.open(arguments[0]);
-            delay(3);
-            app.runVisualBasicMacro("SimpleTest");
-            delay(3);
-            console.log("JavaScript macro execution completed for SimpleTest");
-          } catch(e) {
-            console.log("Error running SimpleTest: " + e);
+          function run(argv) {
+              var app = Application('Microsoft Excel');
+              app.includeStandardAdditions = true;
+              app.activate();
+              
+              try {
+                  var workbookPath = argv[0];
+                  console.log("Opening workbook: " + workbookPath);
+                  
+                  var wb = app.open(workbookPath);
+                  delay(3);
+                  
+                  console.log("Running SimpleTest macro");
+                  app.runVisualBasicMacro("SimpleTest");
+                  delay(3);
+                  
+                  return "JavaScript macro execution completed for SimpleTest";
+              } catch(e) {
+                  return "Error running SimpleTest: " + e;
+              }
           }
           EOF
           
-          # Run the JavaScript
-          osascript -l JavaScript /tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH"
+          # Make the JavaScript executable
+          chmod +x /tmp/run_excel_macro.js
           
-          # Note: Since SimpleTest only writes to the immediate window, we can't check for success
-          # We'll consider the fact that no error was thrown as success
-          echo "SimpleTest macro execution attempted through JavaScript."
+          # Run the JavaScript
+          js_result=$(/tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" 2>&1)
+          echo "JavaScript result: $js_result"
           
           # Since we can't verify SimpleTest success (outputs to immediate window only),
           # we'll just return success if either approach didn't throw an error
+          echo "Both macro execution approaches attempted."
           exit 0
         shell: bash
       - name: "Take exiting screenshot"
