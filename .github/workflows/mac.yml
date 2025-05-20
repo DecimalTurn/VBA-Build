@@ -47,13 +47,13 @@ jobs:
           sudo touch /private/var/db/.AccessibilityAPIEnabled
           
           # Create a UI script to click "Allow" button on permission dialogs
-          cat > /tmp/click_allow.applescript << EOF
+          cat > /tmp/click_allow.applescript << 'EOF'
           on run argv
             try
               tell application "System Events"
                 set procName to item 1 of argv
                 tell process procName
-                  # Look for Allow button on dialog
+                  -- Look for Allow button on dialog
                   repeat 30 times
                     if exists button "Allow" of window 1 then
                       click button "Allow" of window 1
@@ -126,8 +126,15 @@ jobs:
           # Start the UI automation script to click Allow in background again
           osascript /tmp/click_allow.scpt "Microsoft Excel" &
           
-          # Run the AppleScript with a timeout to avoid hanging
-          timeout 60s osascript "$ABS_APPLESCRIPT_PATH" excel "$ABS_WORKBOOK_PATH" "WriteToFile" || echo "AppleScript timed out or failed, checking for output file anyway"
+          # Run the AppleScript with a time limit using perl instead of timeout
+          # This will kill the process after 60 seconds if it hangs
+          perl -e '
+            alarm(60);
+            system("osascript \"$ARGV[0]\" excel \"$ARGV[1]\" \"$ARGV[2]\"");
+            if ($? != 0) {
+              print "AppleScript timed out or failed, checking for output file anyway\n";
+            }
+          ' "$ABS_APPLESCRIPT_PATH" "$ABS_WORKBOOK_PATH" "WriteToFile"
           
           # Display the output file to confirm the macro executed successfully
           OUTPUT_DIR="$(dirname "$ABS_WORKBOOK_PATH")"
@@ -145,19 +152,24 @@ jobs:
             echo "Trying fallback method to run VBA macro directly..."
             
             # Create a JavaScript file to execute the macro directly
-            cat > /tmp/run_excel_macro.js << EOF
+            cat > /tmp/run_excel_macro.js << 'EOF'
             var app = Application('Microsoft Excel');
             app.includeStandardAdditions = true;
             app.activate();
             
-            var wb = app.open('$ABS_WORKBOOK_PATH');
-            delay(2);
-            app.runVisualBasicMacro('WriteToFile');
-            delay(2);
+            try {
+              var wb = app.open(arguments[0]);
+              delay(2);
+              app.runVisualBasicMacro(arguments[1]);
+              delay(2);
+              console.log("JavaScript macro execution completed");
+            } catch(e) {
+              console.log("Error: " + e);
+            }
             EOF
             
             # Run the JavaScript
-            osascript -l JavaScript /tmp/run_excel_macro.js
+            osascript -l JavaScript /tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" "WriteToFile"
             
             # Check if output file was created after fallback
             echo "Checking if output file was created after fallback:"
