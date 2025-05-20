@@ -34,6 +34,48 @@ jobs:
           defaults write com.microsoft.autoupdate2 DisableInsiderCheckbox -bool TRUE
           defaults write com.microsoft.autoupdate2 HowToCheck -string "Manual"
         shell: bash
+      - name: "Configure AppleScript Permissions"
+        run: |
+          # Create a TCC directory if it doesn't exist
+          sudo mkdir -p /Library/Application\ Support/com.apple.TCC
+          
+          # Grant permissions for automation to control apps
+          # This creates a database file with pre-approved automation permissions
+          cat << EOF > /tmp/tcc.sql
+          CREATE TABLE access (service TEXT,client TEXT,client_type INTEGER,allowed INTEGER,prompt_count INTEGER,csreq BLOB,policy_id INTEGER,indirect_object_identifier_type INTEGER,indirect_object_identifier TEXT,indirect_object_code_identity BLOB,flags INTEGER,last_modified TIMESTAMP);
+          INSERT INTO access VALUES('kTCCServiceAppleEvents','/usr/sbin/sshd',1,1,1,NULL,NULL,0,'com.microsoft.Excel',NULL,NULL,NULL);
+          INSERT INTO access VALUES('kTCCServiceAppleEvents','/usr/bin/osascript',0,1,1,NULL,NULL,0,'com.microsoft.Excel',NULL,NULL,NULL);
+          INSERT INTO access VALUES('kTCCServiceAppleEvents','com.microsoft.autoupdate2',0,1,1,NULL,NULL,0,'com.microsoft.Excel',NULL,NULL,NULL);
+          EOF
+          
+          # Apply the permissions by creating/replacing the TCC database
+          sudo sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db < /tmp/tcc.sql
+          
+          # Set ownership and permissions for the TCC database
+          sudo chown root:wheel /Library/Application\ Support/com.apple.TCC/TCC.db
+          sudo chmod 644 /Library/Application\ Support/com.apple.TCC/TCC.db
+          
+          # Create the provisioner trust file
+          # This bypasses the "provisioner" requests access dialog
+          echo '<?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>Authorization</key>
+              <dict>
+                  <key>AppleEvents</key>
+                  <array>
+                      <string>com.microsoft.Excel</string>
+                  </array>
+              </dict>
+          </dict>
+          </plist>' | sudo tee /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles/global.provisionprofile > /dev/null
+          
+          # Set ownership and permissions for the provisioning profile
+          sudo mkdir -p /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles
+          sudo chown root:wheel /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles/global.provisionprofile
+          sudo chmod 644 /Library/Application\ Support/com.apple.TCC/ProvisioningProfiles/global.provisionprofile
+        shell: bash
       - name: "Run Excel Macro"
         run: |
           # Debug: Show current directory and list contents of key directories
@@ -65,6 +107,10 @@ jobs:
           echo "Using workbook: $ABS_WORKBOOK_PATH"
           echo "Using script: $ABS_APPLESCRIPT_PATH"
           
+          # Pre-open Excel to make sure it's running and permissions are established
+          open -a "Microsoft Excel"
+          sleep 5
+          
           # Run the AppleScript to open Excel and execute the WriteToFile macro
           osascript "$ABS_APPLESCRIPT_PATH" excel "$ABS_WORKBOOK_PATH" "WriteToFile"
           
@@ -79,6 +125,7 @@ jobs:
             cat "$OUTPUT_FILE"
           fi
         shell: bash
+        timeout-minutes: 3
       - name: "Take exiting screenshot"
         if: always()
         run: |
