@@ -92,16 +92,6 @@ jobs:
           end run
           EOF
           
-          # Compile the script
-          osacompile -o /tmp/click_allow.scpt /tmp/click_allow.applescript
-          
-          # Set necessary permissions for all AppleScript files
-          chmod +x "$GITHUB_WORKSPACE/scripts/mac/run.applescript"
-          chmod +x "$GITHUB_WORKSPACE/scripts/mac/direct_excel_macro.applescript"
-          chmod +x /tmp/click_allow.scpt
-        shell: bash
-      - name: "Update AppleScript for Excel"
-        run: |
           # Create a very simplified AppleScript just to open Excel and run a macro
           cat > /tmp/run_simple_macro.applescript << 'EOF'
           on run argv
@@ -131,9 +121,7 @@ jobs:
           end run
           EOF
           
-          # Compile the script
-          osacompile -o /tmp/run_simple_macro.scpt /tmp/run_simple_macro.applescript
-          chmod +x /tmp/run_simple_macro.scpt
+          # No need to compile the scripts, we'll run them directly using osascript
         shell: bash
       - name: "Pre-open Excel and dismiss dialogs"
         run: |
@@ -141,8 +129,8 @@ jobs:
           open -a "Microsoft Excel"
           
           # Start the UI automation script to click Allow in background
-          # Run for a longer time to make sure it catches dialogs
-          /tmp/click_allow.scpt &
+          # Use osascript instead of direct execution
+          osascript /tmp/click_allow.applescript &
           
           # Give Excel time to initialize and dismiss dialogs
           sleep 20
@@ -174,20 +162,18 @@ jobs:
           
           echo "Using workbook: $ABS_WORKBOOK_PATH"
           
-          # Run the dialog dismisser in background again
-          /tmp/click_allow.scpt &
+          # Run the dialog dismisser in background again using osascript
+          osascript /tmp/click_allow.applescript &
           
-          # Try the new simpler AppleScript approach
+          # Try the new simpler AppleScript approach, using osascript directly
           echo "Running very simple AppleScript approach with SimpleTest macro..."
-          result=$(/tmp/run_simple_macro.scpt "$ABS_WORKBOOK_PATH" "SimpleTest" 2>&1)
+          result=$(osascript /tmp/run_simple_macro.applescript "$ABS_WORKBOOK_PATH" "SimpleTest" 2>&1)
           echo "AppleScript result: $result"
           
           # Try the JavaScript approach
           echo "Trying JavaScript approach with SimpleTest macro..."
           # Create a JavaScript file that properly handles arguments
           cat > /tmp/run_excel_macro.js << 'EOF'
-          #!/usr/bin/env osascript -l JavaScript
-          
           function run(argv) {
               var app = Application('Microsoft Excel');
               app.includeStandardAdditions = true;
@@ -211,11 +197,8 @@ jobs:
           }
           EOF
           
-          # Make the JavaScript executable
-          chmod +x /tmp/run_excel_macro.js
-          
-          # Run the JavaScript
-          js_result=$(/tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" 2>&1)
+          # Run the JavaScript using osascript directly
+          js_result=$(osascript -l JavaScript /tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" 2>&1)
           echo "JavaScript result: $js_result"
           
           # Since we can't verify SimpleTest success (outputs to immediate window only),
