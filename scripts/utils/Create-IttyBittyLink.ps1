@@ -144,5 +144,5 @@ function Create-IttyBittyLink {
     }
 }
 
-# Export the function for use in other scripts
-Export-ModuleMember -Function Create-IttyBittyLink
+# This makes the function available when the script is dot-sourced
+# Example: . .\Create-IttyBittyLink.ps1
