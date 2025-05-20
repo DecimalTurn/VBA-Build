@@ -52,6 +52,36 @@ jobs:
           name: "Screenshots"
           path: "./tests/screenshots/*"
           if-no-files-found: warn
+      - name: "Create itty.bitty links for Screenshots"
+        if: always()
+        id: create_itty_links
+        run: |
+          # Import the Create-IttyBittyLink function
+          . "./scripts/utils/Create-IttyBittyLink.ps1"
+          
+          $screenshotDir = "${{ github.workspace }}/tests/screenshots"
+          $outputPath = "$screenshotDir/itty_bitty_link.txt"
+          
+          # Create itty.bitty link
+          $ittyBittyLink = Create-IttyBittyLink -ScreenshotDirectory $screenshotDir -OutputPath $outputPath -Verbose
+          
+          # Output the link for the GitHub Actions log
+          Write-Output "Screenshots viewable at: $ittyBittyLink"
+          
+          # Set the output for potential use by other steps
+          echo "ITTY_BITTY_LINK=$ittyBittyLink" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          
+          # Write to GitHub Actions build summary, line by line to avoid YAML issues
+          if ($env:GITHUB_STEP_SUMMARY) {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## VBA Build Screenshots"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "View all screenshots from this build: [Open Screenshots Viewer]($ittyBittyLink)"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Last Updated:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+          }
+        shell: pwsh
+        continue-on-error: true
       - name: "Attestation"
         uses: actions/attest-build-provenance@v2
         with:
