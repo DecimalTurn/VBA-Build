@@ -225,7 +225,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "MacroOutput"
-          path: 
-            - "./tests/fixtures/*.txt"
-            - "./skip_button_log.txt"
+          path: |
+            ./tests/fixtures/*.txt
+            ./skip_button_log.txt
           if-no-files-found: warn
