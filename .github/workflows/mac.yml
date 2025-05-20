@@ -92,81 +92,6 @@ jobs:
           end run
           EOF
           
-          # Create a script specifically to click "Skip to read-only mode" button
-          cat > /tmp/click_read_only.applescript << 'EOF'
-          on run
-            try
-              tell application "System Events"
-                tell process "Microsoft Excel"
-                  -- Look for the welcome screen window
-                  repeat 30 times
-                    try
-                      -- Try to find and click "Skip to read-only mode" button
-                      if exists button "Skip to read-only mode" of window "Excel" then
-                        click button "Skip to read-only mode" of window "Excel"
-                        return "Successfully clicked Skip to read-only mode button"
-                      end if
-                      
-                      -- Alternative text that might be shown
-                      if exists button "Skip to read-only mode" of window 1 then
-                        click button "Skip to read-only mode" of window 1
-                        return "Successfully clicked Skip to read-only mode button"
-                      end if
-                      
-                      -- Handle small screen scenarios where button text might be truncated
-                      if exists button "Skip to read-only" of window 1 then
-                        click button "Skip to read-only" of window 1
-                        return "Successfully clicked Skip to read-only button"
-                      end if
-                      
-                      -- Try to find static text to see if it exists
-                      if exists static text "Skip to read-only mode" of window 1 then
-                        click static text "Skip to read-only mode" of window 1
-                        return "Successfully clicked Skip to read-only mode text"
-                      end if
-                      
-                      delay 1
-                    end try
-                  end repeat
-                  
-                  return "Could not find Skip to read-only mode button"
-                end tell
-              end tell
-            on error errMsg
-              return "Error finding Skip to read-only mode button: " & errMsg
-            end try
-          end run
-          EOF
-          
-          # Create a very simplified AppleScript just to open Excel and run a macro
-          cat > /tmp/run_simple_macro.applescript << 'EOF'
-          on run argv
-              set workbookPath to item 1 of argv
-              set macroName to item 2 of argv
-              
-              tell application "Microsoft Excel"
-                  activate
-                  delay 3
-                  
-                  -- Open workbook
-                  try
-                      open workbook workbook file name workbookPath
-                      delay 3
-                      
-                      -- Run the macro
-                      try
-                          run VB macro macroName
-                          return "Macro executed successfully"
-                      on error macroError
-                          return "Error running macro: " & macroError
-                      end try
-                  on error openError
-                      return "Error opening workbook: " & openError
-                  end try
-              end tell
-          end run
-          EOF
-          
           # No need to compile the scripts, we'll run them directly using osascript
         shell: bash
       - name: "Pre-open Excel and dismiss dialogs"
@@ -185,10 +110,9 @@ jobs:
           mkdir -p screenshots
           screencapture -x screenshots/excel_opened_before_read_only.png
           
-          # Try to click the Skip to read-only mode button
-          echo "Attempting to click Skip to read-only mode button..."
-          read_only_result=$(osascript /tmp/click_read_only.applescript)
-          echo "Read-only mode result: $read_only_result"
+          # Try to click the Skip to read-only mode button using our more comprehensive script
+          echo "Attempting to click through Excel welcome screens..."
+          osascript "$GITHUB_WORKSPACE/scripts/mac/click_read_only.applescript" | tee skip_button_log.txt
           
           # Give Excel time to process after clicking read-only
           sleep 5
@@ -224,8 +148,20 @@ jobs:
           
           # Try the new simpler AppleScript approach, using osascript directly
           echo "Running very simple AppleScript approach with WriteToFile macro..."
-          result=$(osascript /tmp/run_simple_macro.applescript "$ABS_WORKBOOK_PATH" "WriteToFile" 2>&1)
+          result=$(osascript "$GITHUB_WORKSPACE/scripts/mac/direct_excel_macro.applescript" "$ABS_WORKBOOK_PATH" "WriteToFile" 2>&1)
           echo "AppleScript result: $result"
+          
+          # Display the output file to confirm the macro executed successfully
+          OUTPUT_DIR="$(dirname "$ABS_WORKBOOK_PATH")"
+          OUTPUT_FILE="$OUTPUT_DIR/ExcelForMacWorkbook.txt"
+          
+          echo "Checking if output file was created:"
+          ls -l "$OUTPUT_FILE" || echo "Output file not found"
+          if [ -f "$OUTPUT_FILE" ]; then
+            echo "Content of output file:"
+            cat "$OUTPUT_FILE"
+            exit 0
+          fi
           
           # Try the JavaScript approach
           echo "Trying JavaScript approach with WriteToFile macro..."
@@ -258,9 +194,18 @@ jobs:
           js_result=$(osascript -l JavaScript /tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" 2>&1)
           echo "JavaScript result: $js_result"
           
-          # we'll just return success if either approach didn't throw an error
-          echo "Both macro execution approaches attempted."
-          exit 0
+          # Check if the output file was created after the JavaScript approach
+          echo "Checking if output file was created after JavaScript approach:"
+          ls -l "$OUTPUT_FILE" || echo "Output file not found after JavaScript approach"
+          if [ -f "$OUTPUT_FILE" ]; then
+            echo "Content of output file:"
+            cat "$OUTPUT_FILE"
+            exit 0
+          fi
+          
+          # If we get here, both attempts failed to create the output file
+          echo "Both attempts failed to create the output file"
+          exit 1
         shell: bash
       - name: "Take exiting screenshot"
         if: always()
@@ -280,5 +225,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "MacroOutput"
-          path: "./tests/fixtures/*.txt"
+          path: 
+            - "./tests/fixtures/*.txt"
+            - "./skip_button_log.txt"
           if-no-files-found: warn
