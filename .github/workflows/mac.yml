@@ -166,12 +166,12 @@ jobs:
           osascript /tmp/click_allow.applescript &
           
           # Try the new simpler AppleScript approach, using osascript directly
-          echo "Running very simple AppleScript approach with SimpleTest macro..."
-          result=$(osascript /tmp/run_simple_macro.applescript "$ABS_WORKBOOK_PATH" "SimpleTest" 2>&1)
+          echo "Running very simple AppleScript approach with WriteToFile macro..."
+          result=$(osascript /tmp/run_simple_macro.applescript "$ABS_WORKBOOK_PATH" "WriteToFile" 2>&1)
           echo "AppleScript result: $result"
           
           # Try the JavaScript approach
-          echo "Trying JavaScript approach with SimpleTest macro..."
+          echo "Trying JavaScript approach with WriteToFile macro..."
           # Create a JavaScript file that properly handles arguments
           cat > /tmp/run_excel_macro.js << 'EOF'
           function run(argv) {
@@ -186,13 +186,13 @@ jobs:
                   var wb = app.open(workbookPath);
                   delay(3);
                   
-                  console.log("Running SimpleTest macro");
-                  app.runVisualBasicMacro("SimpleTest");
+                  console.log("Running WriteToFile macro");
+                  app.runVisualBasicMacro("WriteToFile");
                   delay(3);
                   
-                  return "JavaScript macro execution completed for SimpleTest";
+                  return "JavaScript macro execution completed for WriteToFile";
               } catch(e) {
-                  return "Error running SimpleTest: " + e;
+                  return "Error running WriteToFile: " + e;
               }
           }
           EOF
@@ -201,8 +201,7 @@ jobs:
           js_result=$(osascript -l JavaScript /tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" 2>&1)
           echo "JavaScript result: $js_result"
           
-          # Since we can't verify SimpleTest success (outputs to immediate window only),
-          # we'll just return success if either approach didn't throw an error
+          # We'll just return success if either approach didn't throw an error
           echo "Both macro execution approaches attempted."
           exit 0
         shell: bash
