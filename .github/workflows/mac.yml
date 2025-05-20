@@ -73,8 +73,9 @@ jobs:
           # Compile the script
           osacompile -o /tmp/click_allow.scpt /tmp/click_allow.applescript
           
-          # Set necessary permissions
+          # Set necessary permissions for all AppleScript files
           chmod +x "$GITHUB_WORKSPACE/scripts/mac/run.applescript"
+          chmod +x "$GITHUB_WORKSPACE/scripts/mac/direct_excel_macro.applescript"
           chmod +x /tmp/click_allow.scpt
         shell: bash
       - name: "Pre-open Excel"
@@ -102,7 +103,6 @@ jobs:
           
           # Use repo-relative paths since we're in the repo root after checkout
           WORKBOOK_PATH="./tests/fixtures/ExcelForMacWorkbook.xlsm"
-          APPLESCRIPT_PATH="./scripts/mac/run.applescript"
           
           # Make sure the workbook exists
           if [ ! -f "$WORKBOOK_PATH" ]; then
@@ -111,31 +111,17 @@ jobs:
             exit 1
           fi
           
-          # Make sure the AppleScript exists
-          if [ ! -f "$APPLESCRIPT_PATH" ]; then
-            echo "Error: AppleScript not found at $APPLESCRIPT_PATH"
-            exit 1
-          fi
-          
-          # Get absolute paths for files (AppleScript needs absolute paths)
+          # Get absolute path for files (AppleScript needs absolute paths)
           ABS_WORKBOOK_PATH="$(pwd)/$WORKBOOK_PATH"
-          ABS_APPLESCRIPT_PATH="$(pwd)/$APPLESCRIPT_PATH"
           
           echo "Using workbook: $ABS_WORKBOOK_PATH"
-          echo "Using script: $ABS_APPLESCRIPT_PATH"
           
           # Start the UI automation script to click Allow in background again
           osascript /tmp/click_allow.scpt "Microsoft Excel" &
+          osascript /tmp/click_allow.scpt "System Events" &
           
-          # Run the AppleScript with a time limit using perl instead of timeout
-          # This will kill the process after 60 seconds if it hangs
-          perl -e '
-            alarm(60);
-            system("osascript \"$ARGV[0]\" excel \"$ARGV[1]\" \"$ARGV[2]\"");
-            if ($? != 0) {
-              print "AppleScript timed out or failed, checking for output file anyway\n";
-            }
-          ' "$ABS_APPLESCRIPT_PATH" "$ABS_WORKBOOK_PATH" "WriteToFile"
+          echo "Running simplified direct AppleScript approach..."
+          osascript "$GITHUB_WORKSPACE/scripts/mac/direct_excel_macro.applescript" "$ABS_WORKBOOK_PATH" "WriteToFile" || echo "AppleScript failed, trying JavaScript approach..."
           
           # Display the output file to confirm the macro executed successfully
           OUTPUT_DIR="$(dirname "$ABS_WORKBOOK_PATH")"
@@ -146,40 +132,41 @@ jobs:
           if [ -f "$OUTPUT_FILE" ]; then
             echo "Content of output file:"
             cat "$OUTPUT_FILE"
+            exit 0
           fi
           
-          # If the AppleScript method failed, try a fallback direct VBA execution
-          if [ ! -f "$OUTPUT_FILE" ]; then
-            echo "Trying fallback method to run VBA macro directly..."
-            
-            # Create a JavaScript file to execute the macro directly
-            cat > /tmp/run_excel_macro.js << 'EOF'
-            var app = Application('Microsoft Excel');
-            app.includeStandardAdditions = true;
-            app.activate();
-            
-            try {
-              var wb = app.open(arguments[0]);
-              delay(2);
-              app.runVisualBasicMacro(arguments[1]);
-              delay(2);
-              console.log("JavaScript macro execution completed");
-            } catch(e) {
-              console.log("Error: " + e);
-            }
-            EOF
-            
-            # Run the JavaScript
-            osascript -l JavaScript /tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" "WriteToFile"
-            
-            # Check if output file was created after fallback
-            echo "Checking if output file was created after fallback:"
-            ls -l "$OUTPUT_FILE" || echo "Output file not found after fallback"
-            if [ -f "$OUTPUT_FILE" ]; then
-              echo "Content of output file after fallback:"
-              cat "$OUTPUT_FILE"
-            fi
+          echo "Trying JavaScript approach..."
+          # Create a JavaScript file to execute the macro directly
+          cat > /tmp/run_excel_macro.js << 'EOF'
+          var app = Application('Microsoft Excel');
+          app.includeStandardAdditions = true;
+          app.activate();
+          
+          try {
+            var wb = app.open(arguments[0]);
+            delay(3);
+            app.runVisualBasicMacro(arguments[1]);
+            delay(3);
+            console.log("JavaScript macro execution completed");
+          } catch(e) {
+            console.log("Error: " + e);
+          }
+          EOF
+          
+          # Run the JavaScript
+          osascript -l JavaScript /tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" "WriteToFile"
+          
+          # Check if output file was created after JavaScript approach
+          echo "Checking if output file was created after JavaScript approach:"
+          ls -l "$OUTPUT_FILE" || echo "Output file not found after JavaScript approach"
+          if [ -f "$OUTPUT_FILE" ]; then
+            echo "Content of output file after JavaScript approach:"
+            cat "$OUTPUT_FILE"
+            exit 0
           fi
+          
+          # If we get here, both methods failed
+          exit 1
         shell: bash
       - name: "Take exiting screenshot"
         if: always()
