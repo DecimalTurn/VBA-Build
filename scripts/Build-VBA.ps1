@@ -266,6 +266,8 @@ try {
             $newFilePath = $newFilePath -replace "/", "\"
             Write-Host "Saving document as .xlsb: $newFilePath"
             $doc.SaveAs($newFilePath, 50) # 50 is the xlExcel12 file format for .xlsb
+            # Delete the .xlsb.xlsm file
+            Remove-Item -Path $outputFilePath -Force
             Write-Host "Document saved as .xlsb"
         } else {
             $doc.Save()
