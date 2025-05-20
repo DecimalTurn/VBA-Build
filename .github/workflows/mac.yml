@@ -55,6 +55,28 @@ jobs:
           defaults write com.microsoft.autoupdate2 DisableInsiderCheckbox -bool TRUE
           defaults write com.microsoft.autoupdate2 HowToCheck -string "Manual"
         shell: bash
+      - name: "Run Excel Macro"
+        run: |
+          # Get absolute path to Excel workbook
+          WORKBOOK_PATH="$GITHUB_WORKSPACE/tests/fixtures/ExcelForMacWorkbook.xlsm"
+          
+          # Make sure the workbook exists
+          if [ ! -f "$WORKBOOK_PATH" ]; then
+            echo "Error: Excel workbook not found at $WORKBOOK_PATH"
+            exit 1
+          fi
+          
+          # Run the AppleScript to open Excel and execute the WriteToFile macro
+          osascript "$GITHUB_WORKSPACE/scripts/mac/run.applescript" excel "$WORKBOOK_PATH" "WriteToFile"
+          
+          # Display the output file to confirm the macro executed successfully
+          echo "Checking if output file was created:"
+          ls -l "$GITHUB_WORKSPACE/tests/fixtures/ExcelForMacWorkbook.txt" || echo "Output file not found"
+          if [ -f "$GITHUB_WORKSPACE/tests/fixtures/ExcelForMacWorkbook.txt" ]; then
+            echo "Content of output file:"
+            cat "$GITHUB_WORKSPACE/tests/fixtures/ExcelForMacWorkbook.txt"
+          fi
+        shell: bash
       - name: "Take exiting screenshot"
         if: always()
         run: |
