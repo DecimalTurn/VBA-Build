@@ -57,24 +57,47 @@ jobs:
         shell: bash
       - name: "Run Excel Macro"
         run: |
-          # Get absolute path to Excel workbook
-          WORKBOOK_PATH="$GITHUB_WORKSPACE/tests/fixtures/ExcelForMacWorkbook.xlsm"
+          # Debug: Show current directory and list contents of key directories
+          pwd
+          ls -la
+          ls -la tests/fixtures || echo "fixtures directory not found"
+          
+          # Use repo-relative paths since we're in the repo root after checkout
+          WORKBOOK_PATH="./tests/fixtures/ExcelForMacWorkbook.xlsm"
+          APPLESCRIPT_PATH="./scripts/mac/run.applescript"
           
           # Make sure the workbook exists
           if [ ! -f "$WORKBOOK_PATH" ]; then
             echo "Error: Excel workbook not found at $WORKBOOK_PATH"
+            ls -la "$(dirname "$WORKBOOK_PATH")"
             exit 1
           fi
           
+          # Make sure the AppleScript exists
+          if [ ! -f "$APPLESCRIPT_PATH" ]; then
+            echo "Error: AppleScript not found at $APPLESCRIPT_PATH"
+            exit 1
+          fi
+          
+          # Get absolute paths for files (AppleScript needs absolute paths)
+          ABS_WORKBOOK_PATH="$(pwd)/$WORKBOOK_PATH"
+          ABS_APPLESCRIPT_PATH="$(pwd)/$APPLESCRIPT_PATH"
+          
+          echo "Using workbook: $ABS_WORKBOOK_PATH"
+          echo "Using script: $ABS_APPLESCRIPT_PATH"
+          
           # Run the AppleScript to open Excel and execute the WriteToFile macro
-          osascript "$GITHUB_WORKSPACE/scripts/mac/run.applescript" excel "$WORKBOOK_PATH" "WriteToFile"
+          osascript "$ABS_APPLESCRIPT_PATH" excel "$ABS_WORKBOOK_PATH" "WriteToFile"
           
           # Display the output file to confirm the macro executed successfully
+          OUTPUT_DIR="$(dirname "$ABS_WORKBOOK_PATH")"
+          OUTPUT_FILE="$OUTPUT_DIR/ExcelForMacWorkbook.txt"
+          
           echo "Checking if output file was created:"
-          ls -l "$GITHUB_WORKSPACE/tests/fixtures/ExcelForMacWorkbook.txt" || echo "Output file not found"
-          if [ -f "$GITHUB_WORKSPACE/tests/fixtures/ExcelForMacWorkbook.txt" ]; then
+          ls -l "$OUTPUT_FILE" || echo "Output file not found"
+          if [ -f "$OUTPUT_FILE" ]; then
             echo "Content of output file:"
-            cat "$GITHUB_WORKSPACE/tests/fixtures/ExcelForMacWorkbook.txt"
+            cat "$OUTPUT_FILE"
           fi
         shell: bash
       - name: "Take exiting screenshot"
