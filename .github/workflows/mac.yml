@@ -120,6 +120,18 @@ jobs:
           # Take another screenshot to see if we successfully entered read-only mode
           screencapture -x screenshots/excel_after_read_only.png
         shell: bash
+      - name: "Handle Provisioner Dialog"
+        run: |
+          # Run our specialized script to handle the provisioner dialog
+          echo "Attempting to handle provisioner dialog..."
+          osascript "$GITHUB_WORKSPACE/scripts/mac/click_provisioner.applescript" | tee provisioner_dialog_log.txt
+          
+          # Take a screenshot to see if we successfully dismissed the dialog
+          screencapture -x screenshots/after_provisioner_dialog.png
+          
+          # Give it a moment to settle
+          sleep 3
+        shell: bash
       - name: "Run Excel Macro"
         timeout-minutes: 5
         run: |
@@ -143,11 +155,11 @@ jobs:
           
           echo "Using workbook: $ABS_WORKBOOK_PATH"
           
-          # Run the dialog dismisser in background again using osascript
-          osascript /tmp/click_allow.applescript &
+          # Start the provisioner dialog handler in background
+          osascript "$GITHUB_WORKSPACE/scripts/mac/click_provisioner.applescript" &
           
-          # Try the new simpler AppleScript approach, using osascript directly
-          echo "Running very simple AppleScript approach with WriteToFile macro..."
+          # Try the AppleScript approach
+          echo "Running AppleScript approach with WriteToFile macro..."
           result=$(osascript "$GITHUB_WORKSPACE/scripts/mac/direct_excel_macro.applescript" "$ABS_WORKBOOK_PATH" "WriteToFile" 2>&1)
           echo "AppleScript result: $result"
           
@@ -190,7 +202,8 @@ jobs:
           }
           EOF
           
-          # Run the JavaScript using osascript directly
+          # Run the JavaScript using osascript directly with provisioner handler in background
+          osascript "$GITHUB_WORKSPACE/scripts/mac/click_provisioner.applescript" &
           js_result=$(osascript -l JavaScript /tmp/run_excel_macro.js "$ABS_WORKBOOK_PATH" 2>&1)
           echo "JavaScript result: $js_result"
           
