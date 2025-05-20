@@ -9,7 +9,7 @@ function Test-WithRubberduck {
     $officeApp.CommandBars.ExecuteMso("VisualBasic")
 
     # Wait for a moment to ensure the VBE is fully loaded
-    Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 5
 
     $rubberduckAddin = $null
     $rubberduck = $null
