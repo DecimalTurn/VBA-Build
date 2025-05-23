@@ -92,6 +92,8 @@ foreach ($folder in $folders) {
         continue
     }
 
+    Write-Host "▶️ Processing folder: $folder"
+
     $ext = "zip"
     Write-Host "Create Zip file and rename it to Office document target"
     . "$PSScriptRoot/scripts/Zip-It.ps1" "${SourceDir}/${folder}"

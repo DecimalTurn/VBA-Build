@@ -20,6 +20,12 @@ $filNameWithExtension = $folderName.Substring($folderName.LastIndexOf('/') + 1)
 $fileName = $filNameWithExtension.Substring(0, $filNameWithExtension.LastIndexOf('.'))
 $fileExtension = $filNameWithExtension.Substring($filNameWithExtension.LastIndexOf('.') + 1)
 
+# Since we can't create an .xlsb file from source code directly, we need to create a .xlsm file and then save it as .xlsb
+# We will use the xlsb.xlsm file extension in that case
+if ($fileExtension -eq "xlsb") {
+    $fileExtension = "xlsb.xlsm"
+}
+
 # Create a copy of the zip/document file in the $folderName/Skeleton folder at the top level
 $copySource = "$folderName/Skeleton/$fileName.$ext"
 $renameDestinationFolder = "$sourceDir/out"

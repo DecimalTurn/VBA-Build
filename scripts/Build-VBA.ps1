@@ -1,8 +1,8 @@
 # Summary:
-# This PowerShell script automates the process of importing VBA modules into an Office document.
+# This PowerShell script automates the process of importing VBA code into an Office document.
 # It retrieves the current working directory, constructs the path to the Office file,
-# and imports all .bas files from a specified folder into the document.
-# It then saves and closes the document, and cleans up the COM objects.
+# and imports .bas, .frm and .cls files from a specified folder into the document and saves it.
+
 
 # Load utiliies
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -35,6 +35,10 @@ $fileExtension = $fileName.Substring($fileName.LastIndexOf('.') + 1)
 
 $outputDir = (DirUp $srcDir) + "out/"
 $outputFilePath = $outputDir + $fileName
+
+if ($outputFilePath.EndsWith(".xlsb")) {
+    $outputFilePath = $outputFilePath -replace "\.xlsb$", ".xlsb.xlsm"
+}
 
 # Make sure the output file already exists
 if (-not (Test-Path $outputFilePath)) {
@@ -116,7 +120,10 @@ if ($null -eq $doc) {
     Write-Host "🔴 Error: Failed to open the document: $outputFilePath"
     Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
     exit 1
+} else {
+    Write-Host "Document opened successfully: $outputFilePath"
 }
+
 
 # Define the module folder path
 
@@ -237,12 +244,6 @@ $basFiles | ForEach-Object {
     }
 }
 
-# Try to minimize the window covering the application
-# Unlikely to work at this starge since we don't have the handle yet and it's probably modal
-# If we can at least manage to get the handle, we could probably lower the window to get a better screenshot
-. "$scriptPath/utils/Minimize.ps1"
-Minimize-Window "Choose a theme"
-
 # Save the document
 Write-Host "Saving document..."
 try {
@@ -250,6 +251,22 @@ try {
         # For PowerPoint, use SaveAs with the same file name to force save
         $doc.SaveAs($outputFilePath)
         Write-Host "Document saved using SaveAs method"
+    } elseif ($officeAppName -eq "Excel") {
+        # For Excel, we need to check if the file name ends with .xlsb.xlsm
+        # If so, we need to save as .xlsb
+        if ($outputFilePath.EndsWith(".xlsb.xlsm")) {
+            $newFilePath = $outputFilePath -replace "\.xlsb\.xlsm$", ".xlsb"
+            # Replace forward slashes with backslashes
+            $newFilePath = $newFilePath -replace "/", "\"
+            Write-Host "Saving document as .xlsb: $newFilePath"
+            $doc.SaveAs($newFilePath, 50) # 50 is the xlExcel12 file format for .xlsb
+            # Delete the .xlsb.xlsm file
+            Remove-Item -Path $outputFilePath -Force
+            Write-Host "Document saved as .xlsb"
+        } else {
+            $doc.Save()
+            Write-Host "Document saved successfully"
+        }
     } else {
         $doc.Save()
         Write-Host "Document saved successfully"

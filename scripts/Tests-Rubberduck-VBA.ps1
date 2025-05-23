@@ -9,7 +9,7 @@ function Test-WithRubberduck {
     $officeApp.CommandBars.ExecuteMso("VisualBasic")
 
     # Wait for a moment to ensure the VBE is fully loaded
-    Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 5
 
     $rubberduckAddin = $null
     $rubberduck = $null
@@ -28,8 +28,25 @@ function Test-WithRubberduck {
         }
         Write-Host "Rubberduck object found."
 
+        # Check if Rubberduck is actually ready
+        try {
+            $isConnected = $rubberduck.IsConnected
+            Write-Host "Rubberduck connection status: $isConnected"
+            if (-not $isConnected) {
+                Write-Host "Waiting for Rubberduck to connect..."
+                Start-Sleep -Seconds 5  # Give it more time to connect
+            }
+        }
+        catch {
+            Write-Host "⚠️ Warning: Unable to check Rubberduck connection status: $($_.Exception.Message)"
+            # Let's try to refresh the object
+            Start-Sleep -Seconds 3
+            $rubberduck = $rubberduckAddin.Object
+        }
+        
+
         # Run all tests in the active VBA project
-        $logPath = "$env:temp\RubberduckTestLog.txt"
+        $logPath = "${env:temp}\RubberduckTestLog.txt"
         $rubberduck.RunAllTestsAndGetResults($logPath)
         
         # Wait for tests to complete with a timeout of 3 minutes
@@ -89,7 +106,7 @@ function Test-WithRubberduck {
         return $true
     }
     catch {
-        Write-Host "🔴 Error: Could not access Rubberduck add-in: $($_.Exception.Message)"
+        Write-Host "🔴 Error while using Rubberduck add-in on line $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.Message)"
         return $false
     }
 }
