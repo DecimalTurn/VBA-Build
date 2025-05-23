@@ -28,7 +28,7 @@ The main script is contained in `Main.ps1` and will perform the following action
 
 ## Supported File Formats
 
-* Excel (.xlsm, .xlam)
+* Excel (.xlsm, .xlam and .xlsb)
 * Word (.docm)
 * PowerPoint (.pptm)
 
