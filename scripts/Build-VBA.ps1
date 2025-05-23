@@ -1,8 +1,8 @@
 # Summary:
-# This PowerShell script automates the process of importing VBA modules into an Office document.
+# This PowerShell script automates the process of importing VBA code into an Office document.
 # It retrieves the current working directory, constructs the path to the Office file,
-# and imports all .bas files from a specified folder into the document.
-# It then saves and closes the document, and cleans up the COM objects.
+# and imports .bas, .frm and .cls files from a specified folder into the document and saves it.
+
 
 # Load utiliies
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
