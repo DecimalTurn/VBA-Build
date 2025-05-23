@@ -244,12 +244,6 @@ $basFiles | ForEach-Object {
     }
 }
 
-# Try to minimize the window covering the application
-# Unlikely to work at this starge since we don't have the handle yet and it's probably modal
-# If we can at least manage to get the handle, we could probably lower the window to get a better screenshot
-. "$scriptPath/utils/Minimize.ps1"
-Minimize-Window "Choose a theme"
-
 # Save the document
 Write-Host "Saving document..."
 try {
