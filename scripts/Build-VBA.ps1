@@ -134,6 +134,10 @@ Write-Host "Module folder path: $moduleFolder"
 $classModulesFolder = GetAbsPath -path "$folderName/Class Modules" -basePath $currentDir
 Write-Host "Class Modules folder path: $classModulesFolder"
 
+# Define Microsoft Excel Objects folder path
+$excelObjectsFolder = GetAbsPath -path "$folderName/Microsoft Excel Objects" -basePath $currentDir
+Write-Host "Microsoft Excel Objects folder path: $excelObjectsFolder"
+
 # Define the forms folder path
 $formsFolder = GetAbsPath -path "$folderName/Forms" -basePath $currentDir
 Write-Host "Forms folder path: $formsFolder"
@@ -157,6 +161,13 @@ if (-not (Test-Path $formsFolder)) {
     Write-Host "Forms folder not found: $formsFolder"
     New-Item -ItemType Directory -Path $formsFolder -Force | Out-Null
     Write-Host "Created forms folder: $formsFolder"
+}
+
+#Check if the Microsoft Excel Objects folder does not exist create an empty one (only for Excel)
+if ($officeAppName -eq "Excel" -and (-not (Test-Path $excelObjectsFolder))) {
+    Write-Host "Microsoft Excel Objects folder not found: $excelObjectsFolder"
+    New-Item -ItemType Directory -Path $excelObjectsFolder -Force | Out-Null
+    Write-Host "Created Microsoft Excel Objects folder: $excelObjectsFolder"
 }
 
 # Get VBProject once and reuse it for all imports
@@ -199,69 +210,115 @@ try {
     exit 1
 }
     
-# Import class modules first (.cls files)
-$clsFiles = Get-ChildItem -Path $classModulesFolder -Filter *.cls -ErrorAction SilentlyContinue
-Write-Host "Found $($clsFiles.Count) .cls files to import"
+# Check if we have Excel-specific objects to import first (when we're building for Excel)
+if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
+    Write-Host "Importing Excel-specific objects from: $excelObjectsFolder"
+    
+    # Find ThisWorkbook.wbk.cls in the Excel Objects folder
+    $excelObjectsFiles = Get-ChildItem -Path $excelObjectsFolder -Filter *.cls -ErrorAction SilentlyContinue
+    $thisWorkbookFile = $excelObjectsFiles | Where-Object { $_.Name -eq "ThisWorkbook.wbk.cls" }
+    
+    if ($null -ne $thisWorkbookFile) {
+        Write-Host "Found ThisWorkbook.wbk.cls in Excel Objects folder"
+        
+        # Find the ThisWorkbook component in the VBA project
+        $thisWorkbookComponent = $null
+        foreach ($component in $vbProject.VBComponents) {
+            if ($component.Name -eq "ThisWorkbook") {
+                $thisWorkbookComponent = $component
+                Write-Host "Found ThisWorkbook component in VBA project"
+                break
+            }
+        }
+        
+        if ($null -eq $thisWorkbookComponent) {
+            Write-Host "Error: Could not find ThisWorkbook component in VBA project"
+            # Throw an error 
+            Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
+            exit 1
+        }
 
-# Loop through each class module file
-$clsFiles | ForEach-Object {
-    Write-Host "Importing class module $($_.Name)..."
-    try {
-        # Check if this is a ThisWorkbook object file (.wbk.cls)
-        if ($_.Name -like "*.wbk.cls") {
-            Write-Host "Detected ThisWorkbook component file: $($_.Name)"
-            # Extract component name (remove .wbk.cls extension)
-            $componentName = $_.BaseName -replace "\.wbk$", ""
-            Write-Host "Looking for component: $componentName"
-            
-            # Find the ThisWorkbook component
-            $thisWorkbookComponent = $null
-            foreach ($component in $vbProject.VBComponents) {
-                if ($component.Name -eq "ThisWorkbook") {
-                    $thisWorkbookComponent = $component
-                    break
-                }
+        # Get the code from the ThisWorkbook file
+        $codeContent = Get-Content -Path $thisWorkbookFile.FullName -Raw
+        
+        try {
+            # Clear existing code and import new code
+            $codeModule = $thisWorkbookComponent.CodeModule
+            if ($codeModule.CountOfLines -gt 0) {
+                $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                Write-Host "Cleared existing code from ThisWorkbook component"
             }
             
-            if ($null -eq $thisWorkbookComponent) {
-                Write-Host "Warning: ThisWorkbook component not found in the project. Looking for alternative components..."
-                
-                # If we can't find ThisWorkbook directly, try a fallback approach
-                foreach ($component in $vbProject.VBComponents) {
-                    if ($component.Type -eq 100) { # 100 corresponds to ThisWorkbook type
-                        $thisWorkbookComponent = $component
-                        Write-Host "Found workbook component with type 100: $($component.Name)"
-                        break
-                    }
-                }
-                
-                if ($null -eq $thisWorkbookComponent) {
-                    Write-Host "Error: Could not find any suitable ThisWorkbook component"
-                    continue
-                }
-            }
+            $codeModule.AddFromString($codeContent)
+            Write-Host "Successfully imported code into ThisWorkbook component"
+        } catch {
+            Write-Host "Error importing ThisWorkbook code: $($_.Exception.Message)"
             
-            # Get the code from the file
-            $codeContent = Get-Content -Path $_.FullName -Raw
-            
-            # Clear existing code in the component
+            # Fallback to line-by-line import
             try {
-                $codeModule = $thisWorkbookComponent.CodeModule
+                Write-Host "Attempting line-by-line import for ThisWorkbook..."
+                $codeLines = Get-Content -Path $thisWorkbookFile.FullName
+                
                 if ($codeModule.CountOfLines -gt 0) {
                     $codeModule.DeleteLines(1, $codeModule.CountOfLines)
-                    Write-Host "Cleared existing code from ThisWorkbook component"
                 }
                 
-                # Add the code to the component
-                $codeModule.AddFromString($codeContent)
-                Write-Host "Successfully imported code into ThisWorkbook component from $($_.Name)"
+                $lineIndex = 1
+                foreach ($line in $codeLines) {
+                    $codeModule.InsertLines($lineIndex, $line)
+                    $lineIndex++
+                }
+                Write-Host "Successfully imported ThisWorkbook code line by line"
             } catch {
-                Write-Host "Error manipulating code module: $($_.Exception.Message)"
+                Write-Host "Failed line-by-line import for ThisWorkbook: $($_.Exception.Message)"
+            }
+        }
+
+    } else {
+        Write-Host "No ThisWorkbook.wbk.cls found in Excel Objects folder"
+    }
+    
+    # Import Sheet objects from Excel Objects folder (only files ending with .sheet.cls)
+    $sheetFiles = $excelObjectsFiles | Where-Object { $_.Name -like "*.sheet.cls" }
+    
+    foreach ($sheetFile in $sheetFiles) {
+        Write-Host "Processing Excel sheet object: $($sheetFile.Name)"
+        
+        # Extract the sheet name from the filename (e.g., Sheet1.sheet.cls -> Sheet1)
+        $sheetName = [System.IO.Path]::GetFileNameWithoutExtension($sheetFile.Name)
+        $sheetName = $sheetName -replace "\.sheet$", ""
+        
+        # Find the corresponding sheet component
+        $sheetComponent = $null
+        foreach ($component in $vbProject.VBComponents) {
+            if ($component.Name -eq $sheetName) {
+                $sheetComponent = $component
+                Write-Host "Found sheet component: $sheetName"
+                break
+            }
+        }
+        
+        if ($null -ne $sheetComponent) {
+            # Get the code from the sheet file
+            $codeContent = Get-Content -Path $sheetFile.FullName -Raw
+            
+            try {
+                # Clear existing code and import new code
+                $codeModule = $sheetComponent.CodeModule
+                if ($codeModule.CountOfLines -gt 0) {
+                    $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                    Write-Host "Cleared existing code from $sheetName component"
+                }
                 
-                # Alternative approach: try to import line by line
+                $codeModule.AddFromString($codeContent)
+                Write-Host "Successfully imported code into $sheetName component"
+            } catch {
+                Write-Host "Error importing sheet code: $($_.Exception.Message)"
+                
+                # Fallback to line-by-line import
                 try {
-                    Write-Host "Attempting line-by-line import as fallback..."
-                    $codeLines = Get-Content -Path $_.FullName
+                    Write-Host "Attempting line-by-line import for $sheetName..."
+                    $codeLines = Get-Content -Path $sheetFile.FullName
                     
                     if ($codeModule.CountOfLines -gt 0) {
                         $codeModule.DeleteLines(1, $codeModule.CountOfLines)
@@ -272,16 +329,27 @@ $clsFiles | ForEach-Object {
                         $codeModule.InsertLines($lineIndex, $line)
                         $lineIndex++
                     }
-                    Write-Host "Successfully imported code line by line into ThisWorkbook component"
+                    Write-Host "Successfully imported $sheetName code line by line"
                 } catch {
-                    Write-Host "Failed line-by-line import: $($_.Exception.Message)"
+                    Write-Host "Failed line-by-line import for $sheetName: $($_.Exception.Message)"
                 }
             }
         } else {
-            # Standard import for regular class modules
-            $vbProject.VBComponents.Import($_.FullName)
-            Write-Host "Successfully imported class module $($_.Name)"
+            Write-Host "Warning: Could not find sheet component for $sheetName"
         }
+    }
+}
+
+# Import class modules (.cls files)
+$clsFiles = Get-ChildItem -Path $classModulesFolder -Filter *.cls -ErrorAction SilentlyContinue
+Write-Host "Found $($clsFiles.Count) .cls files to import"
+
+# Loop through each class module file
+$clsFiles | ForEach-Object {
+    Write-Host "Importing class module $($_.Name)..."
+    try {
+        $vbProject.VBComponents.Import($_.FullName)
+        Write-Host "Successfully imported class module $($_.Name)"
     } catch {
         Write-Host "Failed to import class module $($_.Name): $($_.Exception.Message)"
     }
