@@ -307,17 +307,17 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
                 $codeModule = $sheetComponent.CodeModule
                 if ($codeModule.CountOfLines -gt 0) {
                     $codeModule.DeleteLines(1, $codeModule.CountOfLines)
-                    Write-Host "Cleared existing code from $sheetName component"
+                    Write-Host "Cleared existing code from ${sheetName} component"
                 }
                 
                 $codeModule.AddFromString($codeContent)
-                Write-Host "Successfully imported code into $sheetName component"
+                Write-Host "Successfully imported code into ${sheetName} component"
             } catch {
                 Write-Host "Error importing sheet code: $($_.Exception.Message)"
                 
                 # Fallback to line-by-line import
                 try {
-                    Write-Host "Attempting line-by-line import for $sheetName..."
+                    Write-Host "Attempting line-by-line import for ${sheetName}..."
                     $codeLines = Get-Content -Path $sheetFile.FullName
                     
                     if ($codeModule.CountOfLines -gt 0) {
@@ -329,13 +329,13 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
                         $codeModule.InsertLines($lineIndex, $line)
                         $lineIndex++
                     }
-                    Write-Host "Successfully imported $sheetName code line by line"
+                    Write-Host "Successfully imported ${sheetName} code line by line"
                 } catch {
-                    Write-Host "Failed line-by-line import for $sheetName: $($_.Exception.Message)"
+                    Write-Host "Failed line-by-line import for ${sheetName}: $($_.Exception.Message)"
                 }
             }
         } else {
-            Write-Host "Warning: Could not find sheet component for $sheetName"
+            Write-Host "Warning: Could not find sheet component for ${sheetName}"
         }
     }
 }
