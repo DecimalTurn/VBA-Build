@@ -239,8 +239,23 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
         }
 
         # Get the code from the ThisWorkbook file
-        $codeContent = Get-Content -Path $thisWorkbookFile.FullName -Raw
+        $rawFileContent_wb = Get-Content -Path $thisWorkbookFile.FullName -Raw
         
+        # Process raw code to remove headers and metadata for ThisWorkbook
+        $lines_wb = $rawFileContent_wb -split [System.Environment]::NewLine
+        $processedLinesList_wb = New-Object System.Collections.Generic.List[string]
+        $insideBeginEndBlock_wb = $false
+        foreach ($line_iter_wb in $lines_wb) {
+            $trimmedLine_wb = $line_iter_wb.Trim()
+            if ($trimmedLine_wb -eq "BEGIN") { $insideBeginEndBlock_wb = $true; continue }
+            if ($insideBeginEndBlock_wb -and $trimmedLine_wb -eq "END") { $insideBeginEndBlock_wb = $false; continue }
+            if ($insideBeginEndBlock_wb) { continue }
+            if ($line_iter_wb -match "^VERSION\\s") { continue }
+            if ($line_iter_wb -match "^Attribute\\sVB_") { continue }
+            $processedLinesList_wb.Add($line_iter_wb)
+        }
+        $processedVbaCodeString_wb = $processedLinesList_wb -join [System.Environment]::NewLine
+
         try {
             # Clear existing code and import new code
             $codeModule = $thisWorkbookComponent.CodeModule
@@ -249,7 +264,7 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
                 Write-Host "Cleared existing code from ThisWorkbook component"
             }
             
-            $codeModule.AddFromString($codeContent)
+            $codeModule.AddFromString($processedVbaCodeString_wb) # Use processed code
             Write-Host "Successfully imported code into ThisWorkbook component"
         } catch {
             Write-Host "Error importing ThisWorkbook code: $($_.Exception.Message)"
@@ -257,18 +272,23 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
             # Fallback to line-by-line import
             try {
                 Write-Host "Attempting line-by-line import for ThisWorkbook..."
-                $codeLines = Get-Content -Path $thisWorkbookFile.FullName
+                $processedVbaCodeArray_wb = $processedLinesList_wb.ToArray() # Use processed lines
                 
-                if ($codeModule.CountOfLines -gt 0) {
-                    $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                # Ensure $codeModule is available; it should be from the outer try's assignment
+                if ($null -ne $codeModule) {
+                    if ($codeModule.CountOfLines -gt 0) {
+                        $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                    }
+                    
+                    $lineIndex = 1
+                    foreach ($line_in_fallback_wb in $processedVbaCodeArray_wb) {
+                        $codeModule.InsertLines($lineIndex, $line_in_fallback_wb)
+                        $lineIndex++
+                    }
+                    Write-Host "Successfully imported ThisWorkbook code line by line"
+                } else {
+                    Write-Host "Error: CodeModule for ThisWorkbook is null in fallback."
                 }
-                
-                $lineIndex = 1
-                foreach ($line in $codeLines) {
-                    $codeModule.InsertLines($lineIndex, $line)
-                    $lineIndex++
-                }
-                Write-Host "Successfully imported ThisWorkbook code line by line"
             } catch {
                 Write-Host "Failed line-by-line import for ThisWorkbook: $($_.Exception.Message)"
             }
@@ -300,7 +320,22 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
         
         if ($null -ne $sheetComponent) {
             # Get the code from the sheet file
-            $codeContent = Get-Content -Path $sheetFile.FullName -Raw
+            $rawFileContent_sh = Get-Content -Path $sheetFile.FullName -Raw
+
+            # Process raw code to remove headers and metadata for Sheet objects
+            $lines_sh = $rawFileContent_sh -split [System.Environment]::NewLine
+            $processedLinesList_sh = New-Object System.Collections.Generic.List[string]
+            $insideBeginEndBlock_sh = $false
+            foreach ($line_iter_sh in $lines_sh) {
+                $trimmedLine_sh = $line_iter_sh.Trim()
+                if ($trimmedLine_sh -eq "BEGIN") { $insideBeginEndBlock_sh = $true; continue }
+                if ($insideBeginEndBlock_sh -and $trimmedLine_sh -eq "END") { $insideBeginEndBlock_sh = $false; continue }
+                if ($insideBeginEndBlock_sh) { continue }
+                if ($line_iter_sh -match "^VERSION\\s") { continue }
+                if ($line_iter_sh -match "^Attribute\\sVB_") { continue }
+                $processedLinesList_sh.Add($line_iter_sh)
+            }
+            $processedVbaCodeString_sh = $processedLinesList_sh -join [System.Environment]::NewLine
             
             try {
                 # Clear existing code and import new code
@@ -310,7 +345,7 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
                     Write-Host "Cleared existing code from ${sheetName} component"
                 }
                 
-                $codeModule.AddFromString($codeContent)
+                $codeModule.AddFromString($processedVbaCodeString_sh) # Use processed code
                 Write-Host "Successfully imported code into ${sheetName} component"
             } catch {
                 Write-Host "Error importing sheet code: $($_.Exception.Message)"
@@ -318,18 +353,23 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
                 # Fallback to line-by-line import
                 try {
                     Write-Host "Attempting line-by-line import for ${sheetName}..."
-                    $codeLines = Get-Content -Path $sheetFile.FullName
+                    $processedVbaCodeArray_sh = $processedLinesList_sh.ToArray() # Use processed lines
                     
-                    if ($codeModule.CountOfLines -gt 0) {
-                        $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                    # Ensure $codeModule is available; it should be from the outer try's assignment
+                    if ($null -ne $codeModule) {
+                        if ($codeModule.CountOfLines -gt 0) {
+                            $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                        }
+                        
+                        $lineIndex = 1
+                        foreach ($line_in_fallback_sh in $processedVbaCodeArray_sh) {
+                            $codeModule.InsertLines($lineIndex, $line_in_fallback_sh)
+                            $lineIndex++
+                        }
+                        Write-Host "Successfully imported ${sheetName} code line by line"
+                    } else {
+                        Write-Host "Error: CodeModule for ${sheetName} is null in fallback."
                     }
-                    
-                    $lineIndex = 1
-                    foreach ($line in $codeLines) {
-                        $codeModule.InsertLines($lineIndex, $line)
-                        $lineIndex++
-                    }
-                    Write-Host "Successfully imported ${sheetName} code line by line"
                 } catch {
                     Write-Host "Failed line-by-line import for ${sheetName}: $($_.Exception.Message)"
                 }
