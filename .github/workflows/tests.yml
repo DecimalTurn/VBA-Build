@@ -12,7 +12,11 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [windows-latest, windows-11-arm]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
@@ -27,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v4
         id: "upload"
         with:
-          name: "VBA-Enabled-Documents"
+          name: "VBA-Enabled-Documents-${{ matrix.os }}"
           path: "./tests/out/*"
           if-no-files-found: warn
       - name: "Take exiting screenshot"
@@ -49,11 +53,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: "Screenshots"
+          name: "Screenshots-${{ matrix.os }}"
           path: "./tests/screenshots/*"
           if-no-files-found: warn
       - name: "Attestation"
         uses: actions/attest-build-provenance@v2
         with:
-          subject-name: "VBA-Enabled-Documents"
+          subject-name: "VBA-Enabled-Documents-${{ matrix.os }}"
           subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
