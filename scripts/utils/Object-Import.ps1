@@ -80,7 +80,7 @@ function Import-CodeToComponent {
                 return $false
             }
         } catch {
-            Write-Host "Failed line-by-line import for $componentName: $($_.Exception.Message)"
+            Write-Host "Failed line-by-line import for ${componentName}: $($_.Exception.Message)"
             return $false
         }
     }
