@@ -251,9 +251,10 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
             if ($trimmedLine_wb -eq "BEGIN") { $insideBeginEndBlock_wb = $true; continue }
             if ($insideBeginEndBlock_wb -and $trimmedLine_wb -eq "END") { $insideBeginEndBlock_wb = $false; continue }
             if ($insideBeginEndBlock_wb) { continue }
-            if ($line_iter_wb -match "^VERSION\\s") { continue }
-            if ($line_iter_wb -match "^Attribute\\sVB_") { continue }
-            $processedLinesList_wb.Add($line_iter_wb)
+            # Use $trimmedLine_wb for matching
+            if ($trimmedLine_wb -match "^VERSION\\s") { continue }
+            if ($trimmedLine_wb -match "^Attribute\\sVB_") { continue }
+            $processedLinesList_wb.Add($line_iter_wb) # Add the original line to preserve formatting if needed
         }
         $processedVbaCodeString_wb = $processedLinesList_wb -join [System.Environment]::NewLine
 
@@ -340,9 +341,10 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
             if ($trimmedLine_sh -eq "BEGIN") { $insideBeginEndBlock_sh = $true; continue }
             if ($insideBeginEndBlock_sh -and $trimmedLine_sh -eq "END") { $insideBeginEndBlock_sh = $false; continue }
             if ($insideBeginEndBlock_sh) { continue }
-            if ($line_iter_sh -match "^VERSION\\s") { continue }
-            if ($line_iter_sh -match "^Attribute\\sVB_") { continue }
-            $processedLinesList_sh.Add($line_iter_sh)
+            # Use $trimmedLine_sh for matching
+            if ($trimmedLine_sh -match "^VERSION\\s") { continue }
+            if ($trimmedLine_sh -match "^Attribute\\sVB_") { continue }
+            $processedLinesList_sh.Add($line_iter_sh) # Add the original line to preserve formatting if needed
         }
         $processedVbaCodeString_sh = $processedLinesList_sh -join [System.Environment]::NewLine
         
