@@ -585,7 +585,7 @@ if ($officeAppName -eq "Word" -and (Test-Path $wordObjectsFolder)) {
             $codeModule.AddFromString($processedVbaCodeString_obj)
             Write-Host "Successfully imported code into $objectName component"
         } catch {
-            Write-Host "Error importing code for $objectName: $($_.Exception.Message)"
+            Write-Host "Error importing code for ${objectName}: $($_.Exception.Message)"
             
             # Fallback to line-by-line import
             try {
@@ -602,7 +602,7 @@ if ($officeAppName -eq "Word" -and (Test-Path $wordObjectsFolder)) {
                     Write-Host "Successfully imported $objectName code line by line"
                 }
             } catch {
-                Write-Host "Failed line-by-line import for $objectName: $($_.Exception.Message)"
+                Write-Host "Failed line-by-line import for ${objectName}: $($_.Exception.Message)"
             }
         }
     }
