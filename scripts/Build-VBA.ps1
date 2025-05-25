@@ -218,9 +218,11 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
     $excelObjectsFiles = Get-ChildItem -Path $excelObjectsFolder -Filter *.cls -ErrorAction SilentlyContinue
     $thisWorkbookFile = $excelObjectsFiles | Where-Object { $_.Name -eq "ThisWorkbook.wbk.cls" }
     
+    $wbkFileCount = 0
+    if ($null -ne $thisWorkbookFile) { $wbkFileCount = 1 }
+    Write-Host "Found $wbkFileCount .wbk.cls files to import"
+
     if ($null -ne $thisWorkbookFile) {
-        Write-Host "Found ThisWorkbook.wbk.cls in Excel Objects folder"
-        
         # Find the ThisWorkbook component in the VBA project
         $thisWorkbookComponent = $null
         foreach ($component in $vbProject.VBComponents) {
@@ -305,12 +307,12 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
             }
         }
 
-    } else {
-        Write-Host "No ThisWorkbook.wbk.cls found in Excel Objects folder"
     }
     
     # Import Sheet objects from Excel Objects folder (only files ending with .sheet.cls)
     $sheetFiles = $excelObjectsFiles | Where-Object { $_.Name -like "*.sheet.cls" }
+    
+    Write-Host "Found $($sheetFiles.Count) .sheet.cls files to import"
     
     foreach ($sheetFile in $sheetFiles) {
         Write-Host "Processing Excel sheet object: $($sheetFile.Name)"
