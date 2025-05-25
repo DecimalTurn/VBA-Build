@@ -138,6 +138,10 @@ Write-Host "Class Modules folder path: $classModulesFolder"
 $excelObjectsFolder = GetAbsPath -path "$folderName/Microsoft Excel Objects" -basePath $currentDir
 Write-Host "Microsoft Excel Objects folder path: $excelObjectsFolder"
 
+# Define Microsoft Word Objects folder path
+$wordObjectsFolder = GetAbsPath -path "$folderName/Microsoft Word Objects" -basePath $currentDir
+Write-Host "Microsoft Word Objects folder path: $wordObjectsFolder"
+
 # Define the forms folder path
 $formsFolder = GetAbsPath -path "$folderName/Forms" -basePath $currentDir
 Write-Host "Forms folder path: $formsFolder"
@@ -168,6 +172,13 @@ if ($officeAppName -eq "Excel" -and (-not (Test-Path $excelObjectsFolder))) {
     Write-Host "Microsoft Excel Objects folder not found: $excelObjectsFolder"
     New-Item -ItemType Directory -Path $excelObjectsFolder -Force | Out-Null
     Write-Host "Created Microsoft Excel Objects folder: $excelObjectsFolder"
+}
+
+#Check if the Microsoft Word Objects folder does not exist create an empty one (only for Word)
+if ($officeAppName -eq "Word" -and (-not (Test-Path $wordObjectsFolder))) {
+    Write-Host "Microsoft Word Objects folder not found: $wordObjectsFolder"
+    New-Item -ItemType Directory -Path $wordObjectsFolder -Force | Out-Null
+    Write-Host "Created Microsoft Word Objects folder: $wordObjectsFolder"
 }
 
 # Get VBProject once and reuse it for all imports
@@ -409,6 +420,194 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
     }
 }
 
+# Check if we have Word-specific objects to import (when we're building for Word)
+if ($officeAppName -eq "Word" -and (Test-Path $wordObjectsFolder)) {
+    Write-Host "Importing Word-specific objects from: $wordObjectsFolder"
+    
+    # Find ThisDocument.doc.cls in the Word Objects folder
+    $wordObjectsFiles = Get-ChildItem -Path $wordObjectsFolder -Filter *.cls -ErrorAction SilentlyContinue
+    $thisDocumentFile = $wordObjectsFiles | Where-Object { $_.Name -eq "ThisDocument.doc.cls" }
+    
+    $docFileCount = 0
+    if ($null -ne $thisDocumentFile) { $docFileCount = 1 }
+    Write-Host "Found $docFileCount .doc.cls files to import"
+
+    if ($null -ne $thisDocumentFile) {
+        # Find the ThisDocument component in the VBA project
+        $thisDocumentComponent = $null
+        foreach ($component in $vbProject.VBComponents) {
+            if ($component.Name -eq "ThisDocument") {
+                $thisDocumentComponent = $component
+                Write-Host "Found ThisDocument component in VBA project"
+                break
+            }
+        }
+        
+        if ($null -eq $thisDocumentComponent) {
+            Write-Host "Error: Could not find ThisDocument component in VBA project"
+            Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
+            exit 1
+        }
+
+        # Get the code from the ThisDocument file
+        $rawFileContent_doc = Get-Content -Path $thisDocumentFile.FullName -Raw
+        
+        # Process raw code to remove headers and metadata for ThisDocument
+        $lines_doc = $rawFileContent_doc -split [System.Environment]::NewLine
+        Write-Host "Processing ThisDocument code with $($lines_doc.Count) lines"
+        $processedLinesList_doc = New-Object System.Collections.Generic.List[string]
+        $insideBeginEndBlock_doc = $false
+        $metadataHeaderProcessed_doc = $false # Flag to indicate metadata section is passed
+
+        foreach ($line_iter_doc in $lines_doc) {
+            if ($metadataHeaderProcessed_doc) {
+                $processedLinesList_doc.Add($line_iter_doc)
+                continue
+            }
+
+            $trimmedLine_doc = $line_iter_doc.Trim()
+            if ($trimmedLine_doc -eq "BEGIN") { $insideBeginEndBlock_doc = $true; continue }
+            if ($insideBeginEndBlock_doc -and $trimmedLine_doc -eq "END") { $insideBeginEndBlock_doc = $false; continue }
+            if ($insideBeginEndBlock_doc) { continue }
+            if ($trimmedLine_doc -match "^VERSION\s") { continue }
+            if ($trimmedLine_doc -match "^Attribute\sVB_") { continue }
+
+            # If none of the above, we're past the metadata header
+            $metadataHeaderProcessed_doc = $true
+            $processedLinesList_doc.Add($line_iter_doc) # Add this first non-metadata line
+        }
+        $processedVbaCodeString_doc = $processedLinesList_doc -join [System.Environment]::NewLine
+
+        try {
+            # Clear existing code and import new code
+            $codeModule = $thisDocumentComponent.CodeModule
+            if ($codeModule.CountOfLines -gt 0) {
+                $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                Write-Host "Cleared existing code from ThisDocument component"
+            }
+            
+            $codeModule.AddFromString($processedVbaCodeString_doc) # Use processed code
+            Write-Host "Successfully imported code into ThisDocument component"
+        } catch {
+            Write-Host "Error importing ThisDocument code: $($_.Exception.Message)"
+            
+            # Fallback to line-by-line import
+            try {
+                Write-Host "Attempting line-by-line import for ThisDocument..."
+                $processedVbaCodeArray_doc = $processedLinesList_doc.ToArray() # Use processed lines
+                
+                # Ensure $codeModule is available; it should be from the outer try's assignment
+                if ($null -ne $codeModule) {
+                    if ($codeModule.CountOfLines -gt 0) {
+                        $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                    }
+                    
+                    $lineIndex = 1
+                    foreach ($line_in_fallback_doc in $processedVbaCodeArray_doc) {
+                        $codeModule.InsertLines($lineIndex, $line_in_fallback_doc)
+                        $lineIndex++
+                    }
+                    Write-Host "Successfully imported ThisDocument code line by line"
+                } else {
+                    Write-Host "Error: CodeModule for ThisDocument is null in fallback."
+                }
+            } catch {
+                Write-Host "Failed line-by-line import for ThisDocument: $($_.Exception.Message)"
+            }
+        }
+    }
+    
+    # Look for other potential Word objects to import
+    $otherWordFiles = $wordObjectsFiles | Where-Object { $_.Name -ne "ThisDocument.doc.cls" }
+    
+    Write-Host "Found $($otherWordFiles.Count) other Word object files to import"
+    
+    foreach ($wordFile in $otherWordFiles) {
+        Write-Host "Processing Word object: $($wordFile.Name)"
+        
+        # Extract the component name from the filename (e.g., SomeObject.doc.cls -> SomeObject)
+        $objectName = [System.IO.Path]::GetFileNameWithoutExtension($wordFile.Name)
+        $objectName = $objectName -replace "\.doc$", ""
+        
+        # Try to find corresponding component if it exists
+        $objectComponent = $null
+        foreach ($component in $vbProject.VBComponents) {
+            if ($component.Name -eq $objectName) {
+                $objectComponent = $component
+                Write-Host "Found Word component: $objectName"
+                break
+            }
+        }
+
+        # If component doesn't exist, we'll need to try importing as a regular component
+        if ($null -eq $objectComponent) {
+            Write-Host "Component $objectName not found in VBA project, attempting to import as a regular component"
+            try {
+                $vbProject.VBComponents.Import($wordFile.FullName)
+                Write-Host "Successfully imported $($wordFile.Name) as a new component"
+                continue
+            } catch {
+                Write-Host "Error importing $($wordFile.Name): $($_.Exception.Message)"
+                continue
+            }
+        }
+        
+        # Process the existing component similar to ThisDocument
+        $rawFileContent_obj = Get-Content -Path $wordFile.FullName -Raw
+        $lines_obj = $rawFileContent_obj -split [System.Environment]::NewLine
+        $processedLinesList_obj = New-Object System.Collections.Generic.List[string]
+        $insideBeginEndBlock_obj = $false
+        $metadataHeaderProcessed_obj = $false
+
+        foreach ($line_iter_obj in $lines_obj) {
+            if ($metadataHeaderProcessed_obj) {
+                $processedLinesList_obj.Add($line_iter_obj)
+                continue
+            }
+
+            $trimmedLine_obj = $line_iter_obj.Trim()
+            if ($trimmedLine_obj -eq "BEGIN") { $insideBeginEndBlock_obj = $true; continue }
+            if ($insideBeginEndBlock_obj -and $trimmedLine_obj -eq "END") { $insideBeginEndBlock_obj = $false; continue }
+            if ($insideBeginEndBlock_obj) { continue }
+            if ($trimmedLine_obj -match "^VERSION\s") { continue }
+            if ($trimmedLine_obj -match "^Attribute\sVB_") { continue }
+
+            $metadataHeaderProcessed_obj = $true
+            $processedLinesList_obj.Add($line_iter_obj)
+        }
+        $processedVbaCodeString_obj = $processedLinesList_obj -join [System.Environment]::NewLine
+        
+        try {
+            $codeModule = $objectComponent.CodeModule
+            if ($codeModule.CountOfLines -gt 0) {
+                $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+            }
+            $codeModule.AddFromString($processedVbaCodeString_obj)
+            Write-Host "Successfully imported code into $objectName component"
+        } catch {
+            Write-Host "Error importing code for $objectName: $($_.Exception.Message)"
+            
+            # Fallback to line-by-line import
+            try {
+                $processedVbaCodeArray_obj = $processedLinesList_obj.ToArray()
+                if ($null -ne $codeModule) {
+                    if ($codeModule.CountOfLines -gt 0) {
+                        $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                    }
+                    $lineIndex = 1
+                    foreach ($line_in_fallback_obj in $processedVbaCodeArray_obj) {
+                        $codeModule.InsertLines($lineIndex, $line_in_fallback_obj)
+                        $lineIndex++
+                    }
+                    Write-Host "Successfully imported $objectName code line by line"
+                }
+            } catch {
+                Write-Host "Failed line-by-line import for $objectName: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
 # Import class modules (.cls files)
 $clsFiles = Get-ChildItem -Path $classModulesFolder -Filter *.cls -ErrorAction SilentlyContinue
 Write-Host "Found $($clsFiles.Count) .cls files to import"
@@ -570,5 +769,3 @@ try {
 } catch {
     Write-Host "Warning: Error releasing document COM object: $($_.Exception.Message)"
 }
-
-
