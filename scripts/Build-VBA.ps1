@@ -260,8 +260,8 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
             if ($trimmedLine_wb -eq "BEGIN") { $insideBeginEndBlock_wb = $true; continue }
             if ($insideBeginEndBlock_wb -and $trimmedLine_wb -eq "END") { $insideBeginEndBlock_wb = $false; continue }
             if ($insideBeginEndBlock_wb) { continue }
-            if ($trimmedLine_wb -match "^VERSION\\s") { continue }
-            if ($trimmedLine_wb -match "^Attribute\\sVB_") { continue }
+            if ($trimmedLine_wb -match "^VERSION\s") { continue }
+            if ($trimmedLine_wb -match "^Attribute\sVB_") { continue }
 
             # If none of the above, we're past the metadata header
             $metadataHeaderProcessed_wb = $true
@@ -359,8 +359,8 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
             if ($trimmedLine_sh -eq "BEGIN") { $insideBeginEndBlock_sh = $true; continue }
             if ($insideBeginEndBlock_sh -and $trimmedLine_sh -eq "END") { $insideBeginEndBlock_sh = $false; continue }
             if ($insideBeginEndBlock_sh) { continue }
-            if ($trimmedLine_sh -match "^VERSION\\s") { continue }
-            if ($trimmedLine_sh -match "^Attribute\\sVB_") { continue }
+            if ($trimmedLine_sh -match "^VERSION\s") { continue }
+            if ($trimmedLine_sh -match "^Attribute\sVB_") { continue }
 
             # If none of the above, we're past the metadata header
             $metadataHeaderProcessed_sh = $true
