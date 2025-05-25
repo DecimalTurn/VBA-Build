@@ -246,15 +246,24 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
         Write-Host "Processing ThisWorkbook code with $($lines_wb.Count) lines"
         $processedLinesList_wb = New-Object System.Collections.Generic.List[string]
         $insideBeginEndBlock_wb = $false
+        $metadataHeaderProcessed_wb = $false # Flag to indicate metadata section is passed
+
         foreach ($line_iter_wb in $lines_wb) {
+            if ($metadataHeaderProcessed_wb) {
+                $processedLinesList_wb.Add($line_iter_wb)
+                continue
+            }
+
             $trimmedLine_wb = $line_iter_wb.Trim()
             if ($trimmedLine_wb -eq "BEGIN") { $insideBeginEndBlock_wb = $true; continue }
             if ($insideBeginEndBlock_wb -and $trimmedLine_wb -eq "END") { $insideBeginEndBlock_wb = $false; continue }
             if ($insideBeginEndBlock_wb) { continue }
-            # Use $trimmedLine_wb for matching
             if ($trimmedLine_wb -match "^VERSION\\s") { continue }
             if ($trimmedLine_wb -match "^Attribute\\sVB_") { continue }
-            $processedLinesList_wb.Add($line_iter_wb) # Add the original line to preserve formatting if needed
+
+            # If none of the above, we're past the metadata header
+            $metadataHeaderProcessed_wb = $true
+            $processedLinesList_wb.Add($line_iter_wb) # Add this first non-metadata line
         }
         $processedVbaCodeString_wb = $processedLinesList_wb -join [System.Environment]::NewLine
 
@@ -336,15 +345,24 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
         Write-Host "Processing sheet code with $($lines_sh.Count) lines for $sheetName"
         $processedLinesList_sh = New-Object System.Collections.Generic.List[string]
         $insideBeginEndBlock_sh = $false
+        $metadataHeaderProcessed_sh = $false # Flag to indicate metadata section is passed
+
         foreach ($line_iter_sh in $lines_sh) {
+            if ($metadataHeaderProcessed_sh) {
+                $processedLinesList_sh.Add($line_iter_sh)
+                continue
+            }
+
             $trimmedLine_sh = $line_iter_sh.Trim()
             if ($trimmedLine_sh -eq "BEGIN") { $insideBeginEndBlock_sh = $true; continue }
             if ($insideBeginEndBlock_sh -and $trimmedLine_sh -eq "END") { $insideBeginEndBlock_sh = $false; continue }
             if ($insideBeginEndBlock_sh) { continue }
-            # Use $trimmedLine_sh for matching
             if ($trimmedLine_sh -match "^VERSION\\s") { continue }
             if ($trimmedLine_sh -match "^Attribute\\sVB_") { continue }
-            $processedLinesList_sh.Add($line_iter_sh) # Add the original line to preserve formatting if needed
+
+            # If none of the above, we're past the metadata header
+            $metadataHeaderProcessed_sh = $true
+            $processedLinesList_sh.Add($line_iter_sh) # Add this first non-metadata line
         }
         $processedVbaCodeString_sh = $processedLinesList_sh -join [System.Environment]::NewLine
         
