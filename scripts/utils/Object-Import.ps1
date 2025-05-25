@@ -309,5 +309,5 @@ function Import-ObjectCode {
     }
 }
 
-# Export the functions so they can be used when the script is dot-sourced
-Export-ModuleMember -Function Import-ObjectCode, Parse-Lines, Import-CodeToComponent, Find-VbaComponent, Import-ExcelObjects, Import-WordObjects
+# When this script is dot-sourced, functions are automatically available to the caller
+# No need for Export-ModuleMember in a .ps1 file
