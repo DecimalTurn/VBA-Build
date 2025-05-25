@@ -243,6 +243,7 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
         
         # Process raw code to remove headers and metadata for ThisWorkbook
         $lines_wb = $rawFileContent_wb -split [System.Environment]::NewLine
+        Write-Host "Processing ThisWorkbook code with $($lines_wb.Count) lines"
         $processedLinesList_wb = New-Object System.Collections.Generic.List[string]
         $insideBeginEndBlock_wb = $false
         foreach ($line_iter_wb in $lines_wb) {
@@ -317,66 +318,72 @@ if ($officeAppName -eq "Excel" -and (Test-Path $excelObjectsFolder)) {
                 break
             }
         }
-        
-        if ($null -ne $sheetComponent) {
-            # Get the code from the sheet file
-            $rawFileContent_sh = Get-Content -Path $sheetFile.FullName -Raw
 
-            # Process raw code to remove headers and metadata for Sheet objects
-            $lines_sh = $rawFileContent_sh -split [System.Environment]::NewLine
-            $processedLinesList_sh = New-Object System.Collections.Generic.List[string]
-            $insideBeginEndBlock_sh = $false
-            foreach ($line_iter_sh in $lines_sh) {
-                $trimmedLine_sh = $line_iter_sh.Trim()
-                if ($trimmedLine_sh -eq "BEGIN") { $insideBeginEndBlock_sh = $true; continue }
-                if ($insideBeginEndBlock_sh -and $trimmedLine_sh -eq "END") { $insideBeginEndBlock_sh = $false; continue }
-                if ($insideBeginEndBlock_sh) { continue }
-                if ($line_iter_sh -match "^VERSION\\s") { continue }
-                if ($line_iter_sh -match "^Attribute\\sVB_") { continue }
-                $processedLinesList_sh.Add($line_iter_sh)
-            }
-            $processedVbaCodeString_sh = $processedLinesList_sh -join [System.Environment]::NewLine
-            
-            try {
-                # Clear existing code and import new code
-                $codeModule = $sheetComponent.CodeModule
-                if ($codeModule.CountOfLines -gt 0) {
-                    $codeModule.DeleteLines(1, $codeModule.CountOfLines)
-                    Write-Host "Cleared existing code from ${sheetName} component"
-                }
-                
-                $codeModule.AddFromString($processedVbaCodeString_sh) # Use processed code
-                Write-Host "Successfully imported code into ${sheetName} component"
-            } catch {
-                Write-Host "Error importing sheet code: $($_.Exception.Message)"
-                
-                # Fallback to line-by-line import
-                try {
-                    Write-Host "Attempting line-by-line import for ${sheetName}..."
-                    $processedVbaCodeArray_sh = $processedLinesList_sh.ToArray() # Use processed lines
-                    
-                    # Ensure $codeModule is available; it should be from the outer try's assignment
-                    if ($null -ne $codeModule) {
-                        if ($codeModule.CountOfLines -gt 0) {
-                            $codeModule.DeleteLines(1, $codeModule.CountOfLines)
-                        }
-                        
-                        $lineIndex = 1
-                        foreach ($line_in_fallback_sh in $processedVbaCodeArray_sh) {
-                            $codeModule.InsertLines($lineIndex, $line_in_fallback_sh)
-                            $lineIndex++
-                        }
-                        Write-Host "Successfully imported ${sheetName} code line by line"
-                    } else {
-                        Write-Host "Error: CodeModule for ${sheetName} is null in fallback."
-                    }
-                } catch {
-                    Write-Host "Failed line-by-line import for ${sheetName}: $($_.Exception.Message)"
-                }
-            }
-        } else {
-            Write-Host "Warning: Could not find sheet component for ${sheetName}"
+        # If the sheet component is not found, return an error
+        if ($null -eq $sheetComponent) {
+            Write-Host "Error: Could not find sheet component for $sheetName"
+            Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
+            exit 1
         }
+        
+        
+        # Get the code from the sheet file
+        $rawFileContent_sh = Get-Content -Path $sheetFile.FullName -Raw
+
+        # Process raw code to remove headers and metadata for Sheet objects
+        $lines_sh = $rawFileContent_sh -split [System.Environment]::NewLine
+        Write-Host "Processing sheet code with $($lines_sh.Count) lines for $sheetName"
+        $processedLinesList_sh = New-Object System.Collections.Generic.List[string]
+        $insideBeginEndBlock_sh = $false
+        foreach ($line_iter_sh in $lines_sh) {
+            $trimmedLine_sh = $line_iter_sh.Trim()
+            if ($trimmedLine_sh -eq "BEGIN") { $insideBeginEndBlock_sh = $true; continue }
+            if ($insideBeginEndBlock_sh -and $trimmedLine_sh -eq "END") { $insideBeginEndBlock_sh = $false; continue }
+            if ($insideBeginEndBlock_sh) { continue }
+            if ($line_iter_sh -match "^VERSION\\s") { continue }
+            if ($line_iter_sh -match "^Attribute\\sVB_") { continue }
+            $processedLinesList_sh.Add($line_iter_sh)
+        }
+        $processedVbaCodeString_sh = $processedLinesList_sh -join [System.Environment]::NewLine
+        
+        try {
+            # Clear existing code and import new code
+            $codeModule = $sheetComponent.CodeModule
+            if ($codeModule.CountOfLines -gt 0) {
+                $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                Write-Host "Cleared existing code from ${sheetName} component"
+            }
+            
+            $codeModule.AddFromString($processedVbaCodeString_sh) # Use processed code
+            Write-Host "Successfully imported code into ${sheetName} component"
+        } catch {
+            Write-Host "Error importing sheet code: $($_.Exception.Message)"
+            
+            # Fallback to line-by-line import
+            try {
+                Write-Host "Attempting line-by-line import for ${sheetName}..."
+                $processedVbaCodeArray_sh = $processedLinesList_sh.ToArray() # Use processed lines
+                
+                # Ensure $codeModule is available; it should be from the outer try's assignment
+                if ($null -ne $codeModule) {
+                    if ($codeModule.CountOfLines -gt 0) {
+                        $codeModule.DeleteLines(1, $codeModule.CountOfLines)
+                    }
+                    
+                    $lineIndex = 1
+                    foreach ($line_in_fallback_sh in $processedVbaCodeArray_sh) {
+                        $codeModule.InsertLines($lineIndex, $line_in_fallback_sh)
+                        $lineIndex++
+                    }
+                    Write-Host "Successfully imported ${sheetName} code line by line"
+                } else {
+                    Write-Host "Error: CodeModule for ${sheetName} is null in fallback."
+                }
+            } catch {
+                Write-Host "Failed line-by-line import for ${sheetName}: $($_.Exception.Message)"
+            }
+        }
+
     }
 }
 
