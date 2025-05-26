@@ -120,13 +120,15 @@ function Import-ExcelObjects {
     
     Write-Host "Importing Excel-specific objects from: $excelObjectsFolder"
     
-    # Find ThisWorkbook.wbk.cls in the Excel Objects folder
+    # Find ThisWorkbook files in the Excel Objects folder (support multiple naming patterns)
     $excelObjectsFiles = Get-ChildItem -Path $excelObjectsFolder -Filter *.cls -ErrorAction SilentlyContinue
-    $thisWorkbookFile = $excelObjectsFiles | Where-Object { $_.Name -eq "ThisWorkbook.wbk.cls" }
+    $thisWorkbookFile = $excelObjectsFiles | Where-Object { 
+        $_.Name -eq "ThisWorkbook.wbk.cls" -or $_.Name -eq "ThisWorkbook.cls" 
+    } | Select-Object -First 1
     
     $wbkFileCount = 0
     if ($null -ne $thisWorkbookFile) { $wbkFileCount = 1 }
-    Write-Host "Found $wbkFileCount .wbk.cls files to import"
+    Write-Host "Found $wbkFileCount ThisWorkbook files to import"
 
     if ($null -ne $thisWorkbookFile) {
         # Find the ThisWorkbook component in the VBA project
@@ -152,17 +154,25 @@ function Import-ExcelObjects {
         }
     }
     
-    # Import Sheet objects from Excel Objects folder (only files ending with .sheet.cls)
-    $sheetFiles = $excelObjectsFiles | Where-Object { $_.Name -like "*.sheet.cls" }
+    # Import Sheet objects from Excel Objects folder (support multiple naming patterns)
+    $sheetFiles = $excelObjectsFiles | Where-Object { 
+        $_.Name -like "*.sheet.cls" -or ($_.Name -match "^Sheet\d+\.cls$")
+    }
     
-    Write-Host "Found $($sheetFiles.Count) .sheet.cls files to import"
+    Write-Host "Found $($sheetFiles.Count) sheet files to import"
     
     foreach ($sheetFile in $sheetFiles) {
         Write-Host "Processing Excel sheet object: $($sheetFile.Name)"
         
-        # Extract the sheet name from the filename (e.g., Sheet1.sheet.cls -> Sheet1)
-        $sheetName = [System.IO.Path]::GetFileNameWithoutExtension($sheetFile.Name)
-        $sheetName = $sheetName -replace "\.sheet$", ""
+        # Extract the sheet name from the filename based on pattern
+        $sheetName = ""
+        if ($sheetFile.Name -like "*.sheet.cls") {
+            $sheetName = [System.IO.Path]::GetFileNameWithoutExtension($sheetFile.Name)
+            $sheetName = $sheetName -replace "\.sheet$", ""
+        } else {
+            # For Sheet1.cls pattern
+            $sheetName = [System.IO.Path]::GetFileNameWithoutExtension($sheetFile.Name)
+        }
         
         # Find the corresponding sheet component
         $sheetComponent = Find-VbaComponent -vbProject $vbProject -componentName $sheetName
@@ -206,13 +216,15 @@ function Import-WordObjects {
     
     Write-Host "Importing Word-specific objects from: $wordObjectsFolder"
     
-    # Find ThisDocument.doc.cls in the Word Objects folder
+    # Find ThisDocument files in the Word Objects folder (support multiple naming patterns)
     $wordObjectsFiles = Get-ChildItem -Path $wordObjectsFolder -Filter *.cls -ErrorAction SilentlyContinue
-    $thisDocumentFile = $wordObjectsFiles | Where-Object { $_.Name -eq "ThisDocument.doc.cls" }
+    $thisDocumentFile = $wordObjectsFiles | Where-Object { 
+        $_.Name -eq "ThisDocument.doc.cls" -or $_.Name -eq "ThisDocument.cls" 
+    } | Select-Object -First 1
     
     $docFileCount = 0
     if ($null -ne $thisDocumentFile) { $docFileCount = 1 }
-    Write-Host "Found $docFileCount .doc.cls files to import"
+    Write-Host "Found $docFileCount ThisDocument files to import"
 
     if ($null -ne $thisDocumentFile) {
         # Find the ThisDocument component in the VBA project
@@ -239,7 +251,9 @@ function Import-WordObjects {
     }
     
     # Look for other potential Word objects to import
-    $otherWordFiles = $wordObjectsFiles | Where-Object { $_.Name -ne "ThisDocument.doc.cls" }
+    $otherWordFiles = $wordObjectsFiles | Where-Object { 
+        $_.Name -ne "ThisDocument.doc.cls" -and $_.Name -ne "ThisDocument.cls" 
+    }
     
     Write-Host "Found $($otherWordFiles.Count) other Word object files to import"
     
@@ -248,7 +262,7 @@ function Import-WordObjects {
         
         # Extract the component name from the filename (e.g., SomeObject.doc.cls -> SomeObject)
         $objectName = [System.IO.Path]::GetFileNameWithoutExtension($wordFile.Name)
-        $objectName = $objectName -replace "\.doc$", ""
+        $objectName = $objectName -replace "\.doc$", "" # Remove .doc if present
         
         # Try to find corresponding component if it exists
         $objectComponent = Find-VbaComponent -vbProject $vbProject -componentName $objectName
