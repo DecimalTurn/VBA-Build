@@ -372,6 +372,11 @@ try {
                 Write-Host "Old file deleted: $oldFilePath"
             }
 
+            # Reopen the office application
+            $officeApp = New-Object -ComObject "$officeAppName.Application"
+            $officeApp.Visible = $true
+            Write-Host "Reopened $officeAppName application"
+
             # Reopen the document, but if it's an Addin, we use Addins.Add then we load it
             if ($outputFilePath.EndsWith(".ppam")) {
                 $doc = $officeApp.AddIns.Add($outputFilePath)
