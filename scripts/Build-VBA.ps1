@@ -336,8 +336,11 @@ try {
     # Alternative approach for PowerPoint if SaveAs fails
     if ($officeAppName -eq "PowerPoint") {
         try {
+
+            $fileExtension = $outputFilePath.Substring($outputFilePath.LastIndexOf('.') + 1)
+
             # Try saving with a temporary file name and then renaming
-            $tempPath = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.pptm'
+            $tempPath = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.$fileExtension'
             Write-Host "Attempting to save to temporary location: $tempPath"
             $doc.SaveAs($tempPath)
             
@@ -357,10 +360,6 @@ try {
             Remove-Item -Path $tempPath -Force
             
             Write-Host "Document saved using alternative method"
-            
-            # Skip the rest of the cleanup as we've already done it
-            Write-Host "VBA import completed successfully."
-            exit 0
         } catch {
             Write-Host "Error: Alternative save method also failed: $($_.Exception.Message)"
             Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
