@@ -4,7 +4,7 @@
 # and imports .bas, .frm and .cls files from a specified folder into the document and saves it.
 
 
-# Load utiliies
+# Load utilities
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/utils/Screenshot.ps1"
 . "$scriptPath/utils/Path.ps1"
