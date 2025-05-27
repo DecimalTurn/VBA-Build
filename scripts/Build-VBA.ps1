@@ -38,6 +38,10 @@ if ($outputFilePath.EndsWith(".xlsb")) {
     $outputFilePath = $outputFilePath -replace "\.xlsb$", ".xlsb.xlsm"
 }
 
+if ($outputFilePath.EndsWith(".ppam")) {
+    $outputFilePath = $outputFilePath -replace "\.ppam$", ".ppam.pptm"
+}
+
 # Make sure the output file already exists
 if (-not (Test-Path $outputFilePath)) {
     Write-Host "🔴 Error: Output file not found: $outputFilePath"
@@ -107,15 +111,7 @@ if ($officeAppName -eq "Excel") {
 } elseif ($officeAppName -eq "Word") {
     $doc = $officeApp.Documents.Open($outputFilePath)
 } elseif ($officeAppName -eq "PowerPoint") {
-    if ($outputFilePath.EndsWith(".ppam")) {
-        $doc = $officeApp.AddIns.Add($outputFilePath)
-        if ($null -eq $doc) {
-            Write-Host "Failed to add PowerPoint add-in named $fileName"
-            exit
-        }
-    } else {
-        $doc = $officeApp.Presentations.Open($outputFilePath)
-    }
+    $doc = $officeApp.Presentations.Open($outputFilePath)
 } else {
     Write-Host "🔴 Error: Unsupported Office application: $officeAppName"
     exit 1
@@ -190,29 +186,7 @@ if ($officeAppName -eq "Word" -and (-not (Test-Path $wordObjectsFolder))) {
 # Get VBProject once and reuse it for all imports
 $vbProject = $null
 try {
-    
-    if ($officeAppName -eq "PowerPoint" -and $outputFilePath.EndsWith(".ppam")) {
-        Write-Host "Accessing VBA project for PowerPoint add-in"
-        $vbProject = $officeApp.VBE.ActiveVBProject
-        
-        if ($null -eq $vbProject) {
-            Write-Host "Could not access VBA project from active presentation. Trying to loop over all VB Projects."
-            $vbe = $officeApp.VBE
-            for ($i = 1; $i -le $vbe.VBProjects.Count; $i++) {
-                $proj = $vbe.VBProjects.Item($i)
-                if ($proj.FileName -like "*$fileNameNoExt*") {
-                    $vbProject = $proj
-                    Write-Host "Found matching VBA project: $($proj.Name)"
-                    break
-                }
-            }
-        }
-    } else {
-        # For regular documents, access the VBA project directly
-        $vbProject = $doc.VBProject
-    }
-
-
+    $vbProject = $doc.VBProject
     # Check if the VBProject is accessible
     if ($null -eq $vbProject) {
         Write-Host "VBProject is not accessible. Attempting to re-open the application..."
@@ -227,11 +201,7 @@ try {
         } elseif ($officeAppName -eq "Word") {
             $doc = $officeApp.Documents.Open($outputFilePath)
         } elseif ($officeAppName -eq "PowerPoint") {
-            if ($outputFilePath.EndsWith(".ppam")) {
-                $doc = $officeApp.AddIns.Add($outputFilePath)
-            } else {
-                $doc = $officeApp.Presentations.Open($outputFilePath)
-            }
+            $doc = $officeApp.Presentations.Open($outputFilePath)
         } else {
             Write-Host "🔴 Error: Unsupported Office application: $officeAppName"
             exit 1
@@ -319,10 +289,26 @@ $basFiles | ForEach-Object {
 # Save the document
 Write-Host "Saving document..."
 try {
-    if ($officeAppName -eq "PowerPoint" -or $officeAppName -eq "Word") {
+    if ($officeAppName -eq "Word") {
         # For PowerPoint, use SaveAs with the same file name to force save
         $doc.SaveAs($outputFilePath)
         Write-Host "Document saved using SaveAs method"
+    } elseif ($officeAppName -eq "PowerPoint") {
+        # For PowerPoint, we need to check if the file name ends with .ppam.pptm
+        # If so, we need to save as .ppam
+        if ($outputFilePath.EndsWith(".ppam.pptm")) {
+            $newFilePath = $outputFilePath -replace "\.ppam\.pptm$", ".ppam"
+            # Replace forward slashes with backslashes
+            $newFilePath = $newFilePath -replace "/", "\"
+            Write-Host "Saving document as .ppam: $newFilePath"
+            $doc.SaveAs($newFilePath, 18) # 18 is the ppSaveAsOpenXMLAddIn file format for .ppam
+            # Delete the .ppam.pptm file
+            Remove-Item -Path $outputFilePath -Force
+            Write-Host "Document saved as .ppam"
+        } else {
+            $doc.Save()
+            Write-Host "Document saved successfully"
+        }
     } elseif ($officeAppName -eq "Excel") {
         # For Excel, we need to check if the file name ends with .xlsb.xlsm
         # If so, we need to save as .xlsb
