@@ -413,10 +413,8 @@ try {
     if ($fileExtension -eq "pptm") {
         $Slide = $doc.Slides(1).Duplicate()
     } elseif ($fileExtension -eq "ppam") {
-        # Create a new blank presentation and duplicate the first slide
-        $newPresentation = $officeApp.Presentations.Add()
-        $Slide = $newPresentation.Slides.Add(1, 1) # ppLayoutBlank
-        $newPresentation.Slides(1).Duplicate()
+        # Ensure the Addin is loaded
+        $doc.Loaded = $true
     }
     
     $macroName = "WriteToFile"

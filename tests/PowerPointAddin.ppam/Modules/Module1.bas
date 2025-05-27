@@ -13,7 +13,7 @@ Sub WriteToFile()
     Dim fileNum As Integer
     
     ' Specify the path to the text file
-    filePath = ThisPresentation.Path & "\PowerPointPresentation.txt"
+    filePath = ThisAddin.Path & "\PowerPointAddin.txt"
     
     ' Get a free file number
     fileNum = FreeFile
@@ -28,17 +28,19 @@ Sub WriteToFile()
     Close #fileNum
 End Sub
 
-Private Function ThisPresentation() As PowerPoint.Presentation
-    Dim Pres As Presentation
-    On Error Resume Next
-        Set Pres = Presentations("PowerPointPresentation.pptm")
-    On Error GoTo 0
-    If Pres Is Nothing Then
-        'Try to fallback using ActiveVBProject
-        Dim PresName As String
-        PresName = Split(Application.VBE.ActiveVBProject.FileName, "\")(UBound(Split(Application.VBE.ActiveVBProject.FileName, "\")))
-        Set Pres = Presentations(PresName)
-    End If
-    Set ThisPresentation = Pres
+Private Function ThisAddin() As PowerPoint.Addin
+    ' This function returns the current Addin object
+    ' It is used to access the Addin's properties and methods
+    Dim addin As PowerPoint.Addin
+
+    For Each addin In Application.AddIns
+        If addin.Name = "PowerPointAddin" Then
+            Set ThisAddin = addin
+            Exit Function
+        End If
+    Next addin
+    ' If the addin is not found, return Nothing
+    Set ThisAddin = Nothing
     Exit Function
+
 End Function
