@@ -363,7 +363,7 @@ try {
             # Copy the temp file to the intended destination
             Copy-Item -Path $tempPath -Destination $outputFilePath -Force
             Remove-Item -Path $tempPath -Force
-            
+                       
             Write-Host "Document saved using alternative method"
 
             if ($oldFilePath) {
@@ -381,9 +381,10 @@ try {
             if ($outputFilePath.EndsWith(".ppam")) {
                 $doc = $officeApp.AddIns.Add($outputFilePath)
             } else {
-                $doc = $officeApp.Presentations.Open($outputFilePath)
+                $doc = $officeApp.Presentations.Open($outputFilePath, $false, $false, $true) # ReadOnly, Untitled, WithWindow
             }
 
+            Write-Host "Document reopened successfully after alternative save method"
 
         } catch {
             Write-Host "Error: Alternative save method also failed: $($_.Exception.Message)"
@@ -392,8 +393,26 @@ try {
     }
 }
 
+if ($officeAppName -eq "PowerPoint" -and $outputFilePath.EndsWith(".ppam")) {
+    # Check for and remove any PowerPoint Addin folder that might have been created
+    $presentationName = [System.IO.Path]::GetFileNameWithoutExtension($outputFilePath)
+    $presentationDir = [System.IO.Path]::GetDirectoryName($outputFilePath)
+    $possibleAddinFolder = Join-Path -Path $presentationDir -ChildPath $presentationName
+
+    if (Test-Path -Path $possibleAddinFolder -PathType Container) {
+        Write-Host "Removing auto-generated folder: $possibleAddinFolder"
+        Remove-Item -Path $possibleAddinFolder -Recurse -Force
+    }
+}
+
 # Call the WriteToFile macro to check if the module was imported correctly
 try {
+    
+    # Adding a slide duplication step similar to the working VBScript example from https://www.msofficeforums.com/powerpoint/23672-calling-macro-powerpoint-command-line.html#post74116
+    # This seems to be required for the macro to execute properly in PowerPoint
+    if ($officeAppName -eq "PowerPoint") {
+        $Slide = $doc.Slides(1).Duplicate()
+    }
     
     $macroName = "WriteToFile"
     Write-Host "Macro to execute: $macroName"

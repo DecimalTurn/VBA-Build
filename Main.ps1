@@ -85,7 +85,8 @@ Minimize-Window "Administrator: C:\actions"
 Write-Host "========================="
 
 foreach ($folder in $folders) {
-    $app = Get-OfficeApp -FileExtension $folder.Substring($folder.LastIndexOf('.') + 1)
+    $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
+    $app = Get-OfficeApp -FileExtension $fileExtension
 
     if ($app -eq "Access") {
         Write-Host "Access is not supported at the moment. Skipping..."
@@ -107,15 +108,19 @@ foreach ($folder in $folders) {
         Write-Host "Build-VBA.ps1 failed with exit code $LASTEXITCODE"
         exit $LASTEXITCODE
     }
-
-    if ($TestFramework -ieq "rubberduck") {
+  
+    if ($TestFramework -ieq "rubberduck" -and $fileExtension -ne "ppam") {
         Write-Host "Running tests with Rubberduck"
         $rubberduckTestResult = Test-WithRubberduck -officeApp $officeApp
         if (-not $rubberduckTestResult) {
             Write-Host "Rubberduck tests were not completed successfully, but continuing with the script..."
         }
     } else {
-        Write-Host "Test framework is not Rubberduck. Skipping tests."
+        if ($fileExtension -eq "ppam") {
+            Write-Host "Skipping tests for PowerPoint add-in (.ppam) files since Rubberduck can't run tests on them directly."
+        } else {
+            Write-Host "Test framework is not Rubberduck. Skipping tests."
+        }
     }
 
     Write-Host "Cleaning up"
