@@ -29,7 +29,7 @@ function Get-OfficeApp {
     switch -Regex ($FileExtension.ToLower()) {
         '^(xlsb|xlsm||xltm|xlam)$' { return "Excel" }
         '^(docm|dotm)$' { return "Word" }
-        '^(pptm|potm)$' { return "PowerPoint" }
+        '^(pptm|potm|ppam)$' { return "PowerPoint" }
         '^(accdb|accda)$' { return "Access" }
         default { return $null }
     }
