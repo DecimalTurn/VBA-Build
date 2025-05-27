@@ -352,8 +352,10 @@ try {
             $officeApp.Quit()
             
             # Release COM objects
-            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
-            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
+            # Note: Initially, we were releasing the COM objects here, but since we want to use $doc later in the script to call the WriteToFile macro,
+            # we will not release them here. Instead, we will release them at the end of the script. Hopefully, this will still allow the SaveAs issue to be resolved.
+            # [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
+            # [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
             
             # Wait a moment for resources to be released
             Start-Sleep -Seconds 5
@@ -376,7 +378,6 @@ try {
             } else {
                 $doc = $officeApp.Presentations.Open($outputFilePath)
             }
-            $doc = $officeApp.Presentations.Open($outputFilePath)
 
 
         } catch {
