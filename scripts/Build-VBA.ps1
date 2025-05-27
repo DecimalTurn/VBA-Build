@@ -337,10 +337,10 @@ try {
     if ($officeAppName -eq "PowerPoint") {
         try {
 
-            $fileExtension = $outputFilePath.Substring($outputFilePath.LastIndexOf('.') + 1)
+            $ppFileExtension = $outputFilePath.Substring($outputFilePath.LastIndexOf('.') + 1)
 
             # Try saving with a temporary file name and then renaming
-            $tempPath = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.$fileExtension'
+            $tempPath = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', ".$ppFileExtension"
             Write-Host "Attempting to save to temporary location: $tempPath"
             $doc.SaveAs($tempPath)
             
