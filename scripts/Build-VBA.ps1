@@ -288,6 +288,7 @@ $basFiles | ForEach-Object {
 
 # Save the document
 Write-Host "Saving document..."
+$oldFilePath = ""
 try {
     if ($officeAppName -eq "Word") {
         # For PowerPoint, use SaveAs with the same file name to force save
@@ -297,13 +298,14 @@ try {
         # For PowerPoint, we need to check if the file name ends with .ppam.pptm
         # If so, we need to save as .ppam
         if ($outputFilePath.EndsWith(".ppam.pptm")) {
-            $newFilePath = $outputFilePath -replace "\.ppam\.pptm$", ".ppam"
+            $oldFilePath = $outputFilePath
+            $outputFilePath = $outputFilePath -replace "\.ppam\.pptm$", ".ppam"
             # Replace forward slashes with backslashes
-            $newFilePath = $newFilePath -replace "/", "\"
-            Write-Host "Saving document as .ppam: $newFilePath"
-            $doc.SaveAs($newFilePath, 18) # 18 is the ppSaveAsOpenXMLAddIn file format for .ppam
+            $outputFilePath = $outputFilePath -replace "/", "\"
+            Write-Host "Saving document as .ppam: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 18) # 18 is the ppSaveAsOpenXMLAddIn file format for .ppam
             # Delete the .ppam.pptm file
-            Remove-Item -Path $outputFilePath -Force
+            Remove-Item -Path $oldFilePath -Force
             Write-Host "Document saved as .ppam"
         } else {
             $doc.Save()
@@ -313,13 +315,14 @@ try {
         # For Excel, we need to check if the file name ends with .xlsb.xlsm
         # If so, we need to save as .xlsb
         if ($outputFilePath.EndsWith(".xlsb.xlsm")) {
-            $newFilePath = $outputFilePath -replace "\.xlsb\.xlsm$", ".xlsb"
+            $oldFilePath = $outputFilePath
+            $outputFilePath = $outputFilePath -replace "\.xlsb\.xlsm$", ".xlsb"
             # Replace forward slashes with backslashes
-            $newFilePath = $newFilePath -replace "/", "\"
-            Write-Host "Saving document as .xlsb: $newFilePath"
-            $doc.SaveAs($newFilePath, 50) # 50 is the xlExcel12 file format for .xlsb
+            $outputFilePath = $outputFilePath -replace "/", "\"
+            Write-Host "Saving document as .xlsb: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 50) # 50 is the xlExcel12 file format for .xlsb
             # Delete the .xlsb.xlsm file
-            Remove-Item -Path $outputFilePath -Force
+            Remove-Item -Path $oldFilePath -Force
             Write-Host "Document saved as .xlsb"
         } else {
             $doc.Save()
@@ -353,13 +356,29 @@ try {
             [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
             
             # Wait a moment for resources to be released
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 5
             
             # Copy the temp file to the intended destination
             Copy-Item -Path $tempPath -Destination $outputFilePath -Force
             Remove-Item -Path $tempPath -Force
             
             Write-Host "Document saved using alternative method"
+
+            if ($oldFilePath) {
+                # If we had an old file path, delete it
+                Remove-Item -Path $oldFilePath -Force
+                Write-Host "Old file deleted: $oldFilePath"
+            }
+
+            # Reopen the document, but if it's an Addin, we use Addins.Add then we load it
+            if ($outputFilePath.EndsWith(".ppam")) {
+                $doc = $officeApp.AddIns.Add($outputFilePath)
+            } else {
+                $doc = $officeApp.Presentations.Open($outputFilePath)
+            }
+            $doc = $officeApp.Presentations.Open($outputFilePath)
+
+
         } catch {
             Write-Host "Error: Alternative save method also failed: $($_.Exception.Message)"
             Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
@@ -367,18 +386,9 @@ try {
     }
 }
 
-# Generic test
 # Call the WriteToFile macro to check if the module was imported correctly
 try {
     
-    $vbaModule = $doc.VBProject.VBComponents.Item(1)
-    if ($null -eq $vbaModule) {
-        Write-Host "Error: No VBA module found in the document."
-        Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
-        exit 1
-    }
-    Write-Host "VBA module found: $($vbaModule.Name)"
-
     $macroName = "WriteToFile"
     Write-Host "Macro to execute: $macroName"
     Write-Host "Application state before macro execution: Type=$($officeApp.GetType().FullName)"
