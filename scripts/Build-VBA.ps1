@@ -107,7 +107,15 @@ if ($officeAppName -eq "Excel") {
 } elseif ($officeAppName -eq "Word") {
     $doc = $officeApp.Documents.Open($outputFilePath)
 } elseif ($officeAppName -eq "PowerPoint") {
-    $doc = $officeApp.Presentations.Open($outputFilePath)
+    if ($outputFilePath.EndsWith(".ppam")) {
+        $doc = $officeApp.AddIns.Add($outputFilePath)
+        if ($null -eq $doc) {
+            Write-Host "Failed to add PowerPoint add-in named $fileName"
+            exit
+        }
+    } else {
+        $doc = $officeApp.Presentations.Open($outputFilePath)
+    }
 } else {
     Write-Host "🔴 Error: Unsupported Office application: $officeAppName"
     exit 1
@@ -197,7 +205,11 @@ try {
         } elseif ($officeAppName -eq "Word") {
             $doc = $officeApp.Documents.Open($outputFilePath)
         } elseif ($officeAppName -eq "PowerPoint") {
-            $doc = $officeApp.Presentations.Open($outputFilePath)
+            if ($outputFilePath.EndsWith(".ppam")) {
+                $doc = $officeApp.AddIns.Add($outputFilePath)
+            } else {
+                $doc = $officeApp.Presentations.Open($outputFilePath)
+            }
         } else {
             Write-Host "🔴 Error: Unsupported Office application: $officeAppName"
             exit 1

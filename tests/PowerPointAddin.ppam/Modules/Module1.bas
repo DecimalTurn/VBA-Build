@@ -11,3 +11,23 @@ Public Sub InsertSlideWithTitle(titleText As String)
     Set newSlide = ActivePresentation.Slides.Add(ActivePresentation.Slides.Count + 1, ppLayoutTitle)
     newSlide.Shapes.Title.TextFrame.TextRange.Text = titleText
 End Sub
+
+' Standard test procedure used by the build process
+Public Sub WriteToFile()
+    On Error Resume Next
+    
+    Dim fso As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    
+    Dim filePath As String
+    filePath = ActivePresentation.Path & "\PowerPointAddin.txt"
+    
+    Dim fileObject As Object
+    Set fileObject = fso.CreateTextFile(filePath, True)
+    
+    fileObject.WriteLine "Hello, World!"
+    fileObject.Close
+    
+    Set fileObject = Nothing
+    Set fso = Nothing
+End Sub
