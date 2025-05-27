@@ -190,7 +190,29 @@ if ($officeAppName -eq "Word" -and (-not (Test-Path $wordObjectsFolder))) {
 # Get VBProject once and reuse it for all imports
 $vbProject = $null
 try {
-    $vbProject = $doc.VBProject
+    
+    if ($officeAppName -eq "PowerPoint" -and $outputFilePath.EndsWith(".ppam")) {
+        Write-Host "Accessing VBA project for PowerPoint add-in"
+        $vbProject = $officeApp.VBE.ActiveVBProject
+        
+        if ($null -eq $vbProject) {
+            Write-Host "Could not access VBA project from active presentation. Trying to loop over all VB Projects."
+            $vbe = $officeApp.VBE
+            for ($i = 1; $i -le $vbe.VBProjects.Count; $i++) {
+                $proj = $vbe.VBProjects.Item($i)
+                if ($proj.FileName -like "*$fileNameNoExt*") {
+                    $vbProject = $proj
+                    Write-Host "Found matching VBA project: $($proj.Name)"
+                    break
+                }
+            }
+        }
+    } else {
+        # For regular documents, access the VBA project directly
+        $vbProject = $doc.VBProject
+    }
+
+
     # Check if the VBProject is accessible
     if ($null -eq $vbProject) {
         Write-Host "VBProject is not accessible. Attempting to re-open the application..."
