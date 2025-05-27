@@ -7,6 +7,8 @@
 # Load utiliies
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptPath/utils/Screenshot.ps1"
+. "$scriptPath/utils/Path.ps1"
+. "$scriptPath/utils/Object-Import.ps1"
 
 # Args
 $folderName = $args[0]
@@ -21,10 +23,6 @@ if (-not $officeAppName) {
     Write-Host "🔴 Error: No Office application specified. Usage: Build-VBA.ps1 <FolderName> <officeAppName>"
     exit 1
 }
-
-# Import utility functions
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-. "$scriptPath/utils/Path.ps1"
 
 $currentDir = (Get-Location).Path + "/"
 $srcDir = GetAbsPath -path $folderName -basePath $currentDir
@@ -134,6 +132,14 @@ Write-Host "Module folder path: $moduleFolder"
 $classModulesFolder = GetAbsPath -path "$folderName/Class Modules" -basePath $currentDir
 Write-Host "Class Modules folder path: $classModulesFolder"
 
+# Define Microsoft Excel Objects folder path
+$excelObjectsFolder = GetAbsPath -path "$folderName/Microsoft Excel Objects" -basePath $currentDir
+Write-Host "Microsoft Excel Objects folder path: $excelObjectsFolder"
+
+# Define Microsoft Word Objects folder path
+$wordObjectsFolder = GetAbsPath -path "$folderName/Microsoft Word Objects" -basePath $currentDir
+Write-Host "Microsoft Word Objects folder path: $wordObjectsFolder"
+
 # Define the forms folder path
 $formsFolder = GetAbsPath -path "$folderName/Forms" -basePath $currentDir
 Write-Host "Forms folder path: $formsFolder"
@@ -157,6 +163,20 @@ if (-not (Test-Path $formsFolder)) {
     Write-Host "Forms folder not found: $formsFolder"
     New-Item -ItemType Directory -Path $formsFolder -Force | Out-Null
     Write-Host "Created forms folder: $formsFolder"
+}
+
+#Check if the Microsoft Excel Objects folder does not exist create an empty one (only for Excel)
+if ($officeAppName -eq "Excel" -and (-not (Test-Path $excelObjectsFolder))) {
+    Write-Host "Microsoft Excel Objects folder not found: $excelObjectsFolder"
+    New-Item -ItemType Directory -Path $excelObjectsFolder -Force | Out-Null
+    Write-Host "Created Microsoft Excel Objects folder: $excelObjectsFolder"
+}
+
+#Check if the Microsoft Word Objects folder does not exist create an empty one (only for Word)
+if ($officeAppName -eq "Word" -and (-not (Test-Path $wordObjectsFolder))) {
+    Write-Host "Microsoft Word Objects folder not found: $wordObjectsFolder"
+    New-Item -ItemType Directory -Path $wordObjectsFolder -Force | Out-Null
+    Write-Host "Created Microsoft Word Objects folder: $wordObjectsFolder"
 }
 
 # Get VBProject once and reuse it for all imports
@@ -199,7 +219,25 @@ try {
     exit 1
 }
     
-# Import class modules first (.cls files)
+# Check if we have application-specific objects to import
+$objectsFolder = $null
+if ($officeAppName -eq "Excel") {
+    $objectsFolder = $excelObjectsFolder
+} elseif ($officeAppName -eq "Word") {
+    $objectsFolder = $wordObjectsFolder
+}
+
+if ($objectsFolder -and (Test-Path $objectsFolder)) {
+    $importResult = Import-ObjectCode -officeAppName $officeAppName -vbProject $vbProject -objectsFolder $objectsFolder -screenshotDir $screenshotDir -fileNameNoExt $fileNameNoExt
+    
+    if (-not $importResult) {
+        Write-Host "🔴 Error: Failed to import $officeAppName object code"
+        Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
+        exit 1
+    }
+}
+
+# Import class modules (.cls files)
 $clsFiles = Get-ChildItem -Path $classModulesFolder -Filter *.cls -ErrorAction SilentlyContinue
 Write-Host "Found $($clsFiles.Count) .cls files to import"
 
@@ -360,5 +398,3 @@ try {
 } catch {
     Write-Host "Warning: Error releasing document COM object: $($_.Exception.Message)"
 }
-
-
