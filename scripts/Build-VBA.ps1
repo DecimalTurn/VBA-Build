@@ -410,8 +410,13 @@ try {
     
     # Adding a slide duplication step similar to the working VBScript example from https://www.msofficeforums.com/powerpoint/23672-calling-macro-powerpoint-command-line.html#post74116
     # This seems to be required for the macro to execute properly in PowerPoint
-    if ($officeAppName -eq "PowerPoint") {
+    if ($fileExtension -eq "pptm") {
         $Slide = $doc.Slides(1).Duplicate()
+    } elseif ($fileExtension -eq "ppam") {
+        # Create a new blank presentation and duplicate the first slide
+        $newPresentation = $officeApp.Presentations.Add()
+        $Slide = $newPresentation.Slides.Add(1, 1) # ppLayoutBlank
+        $newPresentation.Slides(1).Duplicate()
     }
     
     $macroName = "WriteToFile"

@@ -1,6 +1,10 @@
 Attribute VB_Name = "Module1"
 Option Explicit
 
+Public Sub Demo()
+    MsgBox "This is a demo subroutine in the PowerPoint addin!"
+End Sub
+
 Public Function HelloFromPowerPointAddin() As String
     HelloFromPowerPointAddin = "Hello from PowerPoint Addin!"
 End Function
