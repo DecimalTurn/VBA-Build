@@ -45,7 +45,6 @@ This could be used to:
 ## What's next?
 
 Depending on the reaction of the community, I might add support for:
-- Workbook, Worksheet and Document (Word) Objects
 - Template formats .xltm, .dotm and .potm
 - Signature of the VBA Project (to facilitate distribution)
 - More complex file structure using [vba-block](https://www.vba-blocks.com/manifest/) configuration file (manifest file)
