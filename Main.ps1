@@ -103,6 +103,10 @@ foreach ($folder in $folders) {
 
     Write-Host "Importing VBA code into Office document" 
     . "$PSScriptRoot/scripts/Build-VBA.ps1" "${SourceDir}/${folder}" "$app"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Build-VBA.ps1 failed with exit code $LASTEXITCODE"
+        exit $LASTEXITCODE
+    }
 
     if ($TestFramework -ieq "rubberduck") {
         Write-Host "Running tests with Rubberduck"
