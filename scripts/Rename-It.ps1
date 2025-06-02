@@ -26,6 +26,11 @@ if ($fileExtension -eq "xlsb") {
     $fileExtension = "xlsb.xlsm"
 }
 
+# Since we can't edit the .ppam file directly, we will use the .pptm file extension
+if ($fileExtension -eq "ppam") {
+    $fileExtension = "ppam.pptm"
+}
+
 # Create a copy of the zip/document file in the $folderName/Skeleton folder at the top level
 $copySource = "$folderName/Skeleton/$fileName.$ext"
 $renameDestinationFolder = "$sourceDir/out"

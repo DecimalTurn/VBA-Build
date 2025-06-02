@@ -38,6 +38,10 @@ if ($outputFilePath.EndsWith(".xlsb")) {
     $outputFilePath = $outputFilePath -replace "\.xlsb$", ".xlsb.xlsm"
 }
 
+if ($outputFilePath.EndsWith(".ppam")) {
+    $outputFilePath = $outputFilePath -replace "\.ppam$", ".ppam.pptm"
+}
+
 # Make sure the output file already exists
 if (-not (Test-Path $outputFilePath)) {
     Write-Host "🔴 Error: Output file not found: $outputFilePath"
@@ -284,22 +288,41 @@ $basFiles | ForEach-Object {
 
 # Save the document
 Write-Host "Saving document..."
+$oldFilePath = ""
 try {
-    if ($officeAppName -eq "PowerPoint" -or $officeAppName -eq "Word") {
+    if ($officeAppName -eq "Word") {
         # For PowerPoint, use SaveAs with the same file name to force save
         $doc.SaveAs($outputFilePath)
         Write-Host "Document saved using SaveAs method"
+    } elseif ($officeAppName -eq "PowerPoint") {
+        # For PowerPoint, we need to check if the file name ends with .ppam.pptm
+        # If so, we need to save as .ppam
+        if ($outputFilePath.EndsWith(".ppam.pptm")) {
+            $oldFilePath = $outputFilePath
+            $outputFilePath = $outputFilePath -replace "\.ppam\.pptm$", ".ppam"
+            # Replace forward slashes with backslashes
+            $outputFilePath = $outputFilePath -replace "/", "\"
+            Write-Host "Saving document as .ppam: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 18) # 18 is the ppSaveAsOpenXMLAddIn file format for .ppam
+            # Delete the .ppam.pptm file
+            Remove-Item -Path $oldFilePath -Force
+            Write-Host "Document saved as .ppam"
+        } else {
+            $doc.Save()
+            Write-Host "Document saved successfully"
+        }
     } elseif ($officeAppName -eq "Excel") {
         # For Excel, we need to check if the file name ends with .xlsb.xlsm
         # If so, we need to save as .xlsb
         if ($outputFilePath.EndsWith(".xlsb.xlsm")) {
-            $newFilePath = $outputFilePath -replace "\.xlsb\.xlsm$", ".xlsb"
+            $oldFilePath = $outputFilePath
+            $outputFilePath = $outputFilePath -replace "\.xlsb\.xlsm$", ".xlsb"
             # Replace forward slashes with backslashes
-            $newFilePath = $newFilePath -replace "/", "\"
-            Write-Host "Saving document as .xlsb: $newFilePath"
-            $doc.SaveAs($newFilePath, 50) # 50 is the xlExcel12 file format for .xlsb
+            $outputFilePath = $outputFilePath -replace "/", "\"
+            Write-Host "Saving document as .xlsb: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 50) # 50 is the xlExcel12 file format for .xlsb
             # Delete the .xlsb.xlsm file
-            Remove-Item -Path $outputFilePath -Force
+            Remove-Item -Path $oldFilePath -Force
             Write-Host "Document saved as .xlsb"
         } else {
             $doc.Save()
@@ -316,8 +339,11 @@ try {
     # Alternative approach for PowerPoint if SaveAs fails
     if ($officeAppName -eq "PowerPoint") {
         try {
+
+            $ppFileExtension = $outputFilePath.Substring($outputFilePath.LastIndexOf('.') + 1)
+
             # Try saving with a temporary file name and then renaming
-            $tempPath = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.pptm'
+            $tempPath = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', ".$ppFileExtension"
             Write-Host "Attempting to save to temporary location: $tempPath"
             $doc.SaveAs($tempPath)
             
@@ -326,21 +352,40 @@ try {
             $officeApp.Quit()
             
             # Release COM objects
-            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
-            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
+            # Note: Initially, we were releasing the COM objects here, but since we want to use $doc later in the script to call the WriteToFile macro,
+            # we will not release them here. Instead, we will release them at the end of the script. Hopefully, this will still allow the SaveAs issue to be resolved.
+            # [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
+            # [System.Runtime.Interopservices.Marshal]::ReleaseComObject($officeApp) | Out-Null
             
             # Wait a moment for resources to be released
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 5
             
             # Copy the temp file to the intended destination
             Copy-Item -Path $tempPath -Destination $outputFilePath -Force
             Remove-Item -Path $tempPath -Force
-            
+                       
             Write-Host "Document saved using alternative method"
-            
-            # Skip the rest of the cleanup as we've already done it
-            Write-Host "VBA import completed successfully."
-            exit 0
+
+            if ($oldFilePath) {
+                # If we had an old file path, delete it
+                Remove-Item -Path $oldFilePath -Force
+                Write-Host "Old file deleted: $oldFilePath"
+            }
+
+            # Reopen the office application
+            $officeApp = New-Object -ComObject "$officeAppName.Application"
+            $officeApp.Visible = $true
+            Write-Host "Reopened $officeAppName application"
+
+            # Reopen the document, but if it's an Addin, we use Addins.Add then we load it
+            if ($outputFilePath.EndsWith(".ppam")) {
+                $doc = $officeApp.AddIns.Add($outputFilePath)
+            } else {
+                $doc = $officeApp.Presentations.Open($outputFilePath, $false, $false, $true) # ReadOnly, Untitled, WithWindow
+            }
+
+            Write-Host "Document reopened successfully after alternative save method"
+
         } catch {
             Write-Host "Error: Alternative save method also failed: $($_.Exception.Message)"
             Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
@@ -348,18 +393,30 @@ try {
     }
 }
 
-# Generic test
+if ($officeAppName -eq "PowerPoint" -and $outputFilePath.EndsWith(".ppam")) {
+    # Check for and remove any PowerPoint Addin folder that might have been created
+    $presentationName = [System.IO.Path]::GetFileNameWithoutExtension($outputFilePath)
+    $presentationDir = [System.IO.Path]::GetDirectoryName($outputFilePath)
+    $possibleAddinFolder = Join-Path -Path $presentationDir -ChildPath $presentationName
+
+    if (Test-Path -Path $possibleAddinFolder -PathType Container) {
+        Write-Host "Removing auto-generated folder: $possibleAddinFolder"
+        Remove-Item -Path $possibleAddinFolder -Recurse -Force
+    }
+}
+
 # Call the WriteToFile macro to check if the module was imported correctly
 try {
     
-    $vbaModule = $doc.VBProject.VBComponents.Item(1)
-    if ($null -eq $vbaModule) {
-        Write-Host "Error: No VBA module found in the document."
-        Take-Screenshot -OutputPath "${screenshotDir}Screenshot_${fileNameNoExt}_{{timestamp}}.png"
-        exit 1
+    # Adding a slide duplication step similar to the working VBScript example from https://www.msofficeforums.com/powerpoint/23672-calling-macro-powerpoint-command-line.html#post74116
+    # This seems to be required for the macro to execute properly in PowerPoint
+    if ($fileExtension -eq "pptm") {
+        $Slide = $doc.Slides(1).Duplicate()
+    } elseif ($fileExtension -eq "ppam") {
+        # Ensure the Addin is loaded
+        $doc.Loaded = $true
     }
-    Write-Host "VBA module found: $($vbaModule.Name)"
-
+    
     $macroName = "WriteToFile"
     Write-Host "Macro to execute: $macroName"
     Write-Host "Application state before macro execution: Type=$($officeApp.GetType().FullName)"
