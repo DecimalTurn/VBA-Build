@@ -56,5 +56,6 @@ jobs:
           tag_name: ${{ steps.bump_version.outputs.new_tag }}
           target_commitish: ${{ github.ref_name }}
           generate_release_notes: true
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
