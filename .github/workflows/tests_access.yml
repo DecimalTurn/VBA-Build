@@ -1,0 +1,70 @@
+name: Test Build VBA
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev*
+    paths-ignore:
+      - '**/README.md'
+      - '.devcontainer/**'
+
+permissions:
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Build VBA-Enabled Documents (using own action)"
+        id: build_vba
+        uses: ./
+        with:
+          source-dir: "./" # Don't build anything, but include the setup part of the action
+          test-framework: "none"
+        timeout-minutes: 20
+      - name: "Build Access Database (using msaccess-vcs-build action)"
+        id: build_access_file
+        uses: AccessCodeLib/msaccess-vcs-build@main
+        with:
+          source-dir: "./tests/AccessDatabase.accde"
+          target-dir: "./tests/out"
+          compile: "false"
+          vcs-url: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
+      - name: "Upload Build Artifact"
+        uses: actions/upload-artifact@v4
+        id: "upload"
+        with:
+          name: "VBA-Enabled-Documents"
+          path: "./tests/out/*"
+          if-no-files-found: warn
+      - name: "Take exiting screenshot"
+        if: always()
+        run: |
+          . "./scripts/utils/Screenshot.ps1"
+          # Create the directory if it does not exist
+          if (!(Test-Path -Path ${{ github.workspace }}/tests/screenshots)) {
+            New-Item -ItemType Directory -Path ${{ github.workspace }}/tests/screenshots
+          }
+          # Minimize PowerShell window
+          . "./scripts/utils/Minimize.ps1"
+          Minimize-Window "Administrator: C:\Program Files\PowerShell\7\pwsh.EXE"
+          Take-Screenshot -OutputPath ${{ github.workspace }}/tests/screenshots/ExitScreenshot.png
+        shell: pwsh      
+      # TODO: Check if better method to visualize the screenshots: https://github.com/actions/upload-artifact/issues/14
+      - name: "Upload Screenshots"
+        # Run this step even if the build failed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "Screenshots"
+          path: "./tests/screenshots/*"
+          if-no-files-found: warn
+      - name: "Attestation"
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: "VBA-Enabled-Documents"
+          subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
