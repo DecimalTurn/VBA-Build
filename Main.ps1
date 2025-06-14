@@ -30,7 +30,7 @@ function Get-OfficeApp {
         '^(xlsb|xlsm||xltm|xlam)$' { return "Excel" }
         '^(docm|dotm)$' { return "Word" }
         '^(pptm|potm|ppam)$' { return "PowerPoint" }
-        '^(accdb|accda)$' { return "Access" }
+        '^(accdb|accda|accde)$' { return "Access" }
         default { return $null }
     }
 }
