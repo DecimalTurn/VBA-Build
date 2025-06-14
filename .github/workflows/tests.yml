@@ -8,6 +8,7 @@ on:
     paths-ignore:
       - '**/README.md'
       - '.devcontainer/**'
+      - '.github/workflows/tests_access.yml'
 
 permissions:
   id-token: write
