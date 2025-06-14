@@ -8,6 +8,11 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && \
     apt-get install -y git
 
+# Configure Git aliases
+RUN git config --global alias.undo "reset --soft HEAD^" && \
+    git config --global alias.graph "log --all --graph --decorate --oneline" && \
+    git config --global alias.i "init"
+
 # Install .NET SDK
 RUN apt-get update && \
     apt-get install -y wget apt-transport-https && \
