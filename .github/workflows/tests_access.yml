@@ -30,7 +30,8 @@ jobs:
         id: build_access_file
         uses: AccessCodeLib/msaccess-vcs-build@main
         with:
-          source-dir: "./tests_access/AccessDatabase.accde"
+          source-dir: "./tests_access/AccessDatabase.accdb"
+          source-file: "AccessDatabase.accdb"
           target-dir: "./tests_access/out"
           compile: "false"
           vcs-url: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
