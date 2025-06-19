@@ -4,7 +4,7 @@
     "AccessVersion": "16.0 64-bit"
   },
   "Options": {
-    "ExportFolder": "\\source",
+    "ExportFolder": "\\tests_access\\source",
     "ShowDebug": false,
     "UseFastSave": true,
     "UseMergeBuild": false,
