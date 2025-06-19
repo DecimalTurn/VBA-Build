@@ -54,7 +54,7 @@ if ($OfficeApp -ieq "automatic") {
     }
     
 } else {
-    # We parse the OfficeApp parameter to get the list of Office applications
+    # We parse the OfficeApp parameter to get the name of the Office application
     $officeApps = $OfficeApp -split ","
     $officeApps = $officeApps | ForEach-Object { $_.Trim() }
     $officeApps = $officeApps | Where-Object { $_ -in @("Excel", "Word", "PowerPoint", "Access") }
@@ -100,8 +100,20 @@ Minimize-Window "Administrator: C:\actions"
 Write-Host "========================="
 
 foreach ($folder in $folders) {
+
     $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
-    $app = Get-OfficeApp -FileExtension $fileExtension
+
+    if ($OfficeApp -ieq "automatic") {
+        $app = Get-OfficeApp -FileExtension $fileExtension
+    } elseif ($officeApps.Count -eq 1) {
+        $app = $officeApps[0]
+    } elseif ($officeApps.Count -gt 1) {
+        Write-Host "Multiple Office applications specified. Please specify only one."
+        exit 1
+    } else {
+        Write-Host "No valid Office applications specified. Exiting script."
+        exit 1
+    }
 
     if ($app -eq "Access") {
         Write-Host "Access is not supported at the moment. Skipping..."
