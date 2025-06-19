@@ -103,7 +103,13 @@ Write-Host "========================="
 
 foreach ($folder in $folders) {
 
+    Write-Host "▶️ Processing folder: $folder"
+
     $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
+
+    Write-Host "File extension: $fileExtension"
+    Write-Host "Office app detection : $OfficeAppName"
+    Write-Host "Office apps: $officeApps"
 
     if ($OfficeAppName -ieq "automatic") {
         $app = Get-OfficeApp -FileExtension $fileExtension
@@ -121,8 +127,6 @@ foreach ($folder in $folders) {
         Write-Host "Access is not supported at the moment. Skipping..."
         continue
     }
-
-    Write-Host "▶️ Processing folder: $folder"
 
     $ext = "zip"
     Write-Host "Create Zip file and rename it to Office document target"
