@@ -1,7 +1,8 @@
 # Get the source directory from command line argument or use default "src"
 param(
     [string]$SourceDir = "src",
-    [string]$TestFramework = "none" # Default to "none" if not specified
+    [string]$TestFramework = "none", # Default to "none" if not specified
+    [string]$OfficeApp = "automatic" # Default to "automatic" if not specified
 )
 
 Write-Host "Current directory: $(pwd)"
@@ -35,20 +36,34 @@ function Get-OfficeApp {
     }
 }
 
-# Create a list of Office applications that are needed based on the file extensions of the folders
-foreach ($folder in $folders) {
-    $FileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
-    $app = Get-OfficeApp -FileExtension $FileExtension
-    
-    if ($app) {
-        if ($officeApps -notcontains $app) {
-            $officeApps += $app
+if ($OfficeApp -ieq "automatic") {
+
+    # Create a list of Office applications that are needed based on the file extensions of the folders
+    foreach ($folder in $folders) {
+        $FileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
+        $app = Get-OfficeApp -FileExtension $FileExtension
+        
+        if ($app) {
+            if ($officeApps -notcontains $app) {
+                $officeApps += $app
+            }
+        } else {
+            Write-Host "Unknown file extension: $FileExtension. Skipping..."
+            continue
         }
-    } else {
-        Write-Host "Unknown file extension: $FileExtension. Skipping..."
-        continue
+    }
+    
+} else {
+    # We parse the OfficeApp parameter to get the list of Office applications
+    $officeApps = $OfficeApp -split ","
+    $officeApps = $officeApps | ForEach-Object { $_.Trim() }
+    $officeApps = $officeApps | Where-Object { $_ -in @("Excel", "Word", "PowerPoint", "Access") }
+    if ($officeApps.Count -eq 0) {
+        Write-Host "No valid Office applications specified. Exiting script."
+        exit 1
     }
 }
+
 
 # We need to open and close the Office applications before we can enable VBOM
 Write-Host "Open and close Office applications"

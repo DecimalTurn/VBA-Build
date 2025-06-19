@@ -25,12 +25,13 @@ jobs:
         with:
           source-dir: "./tests_access" # Don't build anything, but include the setup part of the action
           test-framework: "none"
+          office-apps: "Access"
         timeout-minutes: 20
       - name: "Build Access Database (using msaccess-vcs-build action)"
         id: build_access_file
         uses: AccessCodeLib/msaccess-vcs-build@main
         with:
-          source-dir: "./tests_access/AccessDatabase1"
+          source-dir: "./tests_access/source"
           target-dir: "./tests_access/out"
           compile: "false"
           vcs-url: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"

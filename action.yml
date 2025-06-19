@@ -14,6 +14,10 @@ inputs:
     description: 'The test framework to use for the build process.'
     required: false
     default: 'none'
+  office-apps:
+    description: 'A list of the Office applications to install seperated by commas. Options: Excel, Word, PowerPoint, Access'
+    required: false
+    default: 'automatic'
 
 runs:
   using: "composite"
