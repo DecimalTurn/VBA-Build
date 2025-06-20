@@ -110,7 +110,8 @@ foreach ($folder in $folders) {
     if ($OfficeAppDetection -ieq "automatic") {
         $app = Get-OfficeApp -FileExtension $fileExtension
     } elseif ($officeApps.Count -eq 1) {
-        $app = $officeApps[0]
+        # Note that when an array has only one element, PowerShell will treat it as a single value
+        $app = $officeApps
     } elseif ($officeApps.Count -gt 1) {
         Write-Host "Multiple Office applications specified. Please specify only one."
         exit 1
