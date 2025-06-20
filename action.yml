@@ -15,7 +15,10 @@ inputs:
     required: false
     default: 'none'
   office-app:
-    description: 'The Office application to install seperated by commas. Options: Excel, Word, PowerPoint or Access'
+    description: |
+      The Office application to install.
+      The default mode is automatic and will detect the app based on the folder name.
+      To force a specific app instead, use the options: Excel, Word, PowerPoint or Access.
     required: false
     default: 'automatic'
 
@@ -43,7 +46,11 @@ runs:
       shell: pwsh
     - name: "Run VBA Build"
       shell: pwsh
-      run: '${{ github.action_path }}\Main.ps1 -SourceDir "${{ inputs.source-dir }}" -TestFramework "${{ inputs.test-framework }}"'
+      run: |
+        ${{ github.action_path }}\Main.ps1 `
+          -SourceDir "${{ inputs['source-dir'] }}" `
+          -TestFramework "${{ inputs['test-framework'] }}" `
+          -OfficeAppDetection "${{ inputs['office-app'] }}"
 outputs:
   result:
     description: "The result of the VBA build process."

@@ -23,7 +23,7 @@ jobs:
         id: build_vba
         uses: ./
         with:
-          source-dir: "./tests_access" # Don't build anything, but include the setup part of the action
+          source-dir: "./tests_access"
           test-framework: "none"
           office-app: "Access"
         timeout-minutes: 20
