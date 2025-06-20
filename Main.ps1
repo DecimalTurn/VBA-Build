@@ -2,7 +2,7 @@
 param(
     [string]$SourceDir = "src",
     [string]$TestFramework = "none", # Default to "none" if not specified
-    [string]$OfficeAppName = "automatic" # Default to "automatic" if not specified
+    [string]$OfficeAppDetection = "automatic" # Default to "automatic" if not specified
 )
 
 Write-Host "Current directory: $(pwd)"
@@ -36,7 +36,7 @@ function Get-OfficeApp {
     }
 }
 
-if ($OfficeAppName -ieq "automatic") {
+if ($OfficeAppDetection -ieq "automatic") {
 
     Write-Host "Automatic detection of Office applications based on file extensions"
 
@@ -57,7 +57,7 @@ if ($OfficeAppName -ieq "automatic") {
     
 } else {
     # We parse the OfficeApp parameter to get the name of the Office application
-    $officeApps = $OfficeAppName -split ","
+    $officeApps = $OfficeAppDetection -split ","
     $officeApps = $officeApps | ForEach-Object { $_.Trim() }
     $officeApps = $officeApps | Where-Object { $_ -in @("Excel", "Word", "PowerPoint", "Access") }
     if ($officeApps.Count -eq 0) {
@@ -107,11 +107,7 @@ foreach ($folder in $folders) {
 
     $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
 
-    Write-Host "File extension: $fileExtension"
-    Write-Host "Office app detection : $OfficeAppName"
-    Write-Host "Office apps: $officeApps"
-
-    if ($OfficeAppName -ieq "automatic") {
+    if ($OfficeAppDetection -ieq "automatic") {
         $app = Get-OfficeApp -FileExtension $fileExtension
     } elseif ($officeApps.Count -eq 1) {
         $app = $officeApps[0]
