@@ -119,6 +119,8 @@ foreach ($folder in $folders) {
         exit 1
     }
 
+    Write-Host "Office application: $app"
+
     if ($app -eq "Access") {
         Write-Host "Access is not supported at the moment. Skipping..."
         continue
