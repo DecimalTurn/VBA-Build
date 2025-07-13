@@ -4,7 +4,7 @@
     "AccessVersion": "16.0 64-bit"
   },
   "Options": {
-    "ExportFolder": "\\tests_access\\source",
+    "ExportFolder": "\\tests_access\\test.accdb",
     "ShowDebug": false,
     "UseFastSave": true,
     "UseMergeBuild": false,
