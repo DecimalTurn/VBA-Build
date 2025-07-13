@@ -6,7 +6,7 @@
   "Items": {
     "Name": "TestApp",
     "Description": "",
-    "FileName": "Test.accdb",
+    "FileName": "AccessDatabase.accdb",
     "HelpFile": "",
     "HelpContextId": 0,
     "ConditionalCompilationArguments": "",
