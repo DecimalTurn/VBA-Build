@@ -20,6 +20,10 @@ if ($folders.Count -eq 0) {
 }
 
 $officeApps = @()
+$processedFolders = 0
+$successfulBuilds = 0
+$accessFolders = @()
+$hasAccessDatabase = $false
 
 function Get-OfficeApp {
     param (
@@ -104,6 +108,7 @@ Write-Host "========================="
 foreach ($folder in $folders) {
 
     Write-Host "▶️ Processing folder: $folder"
+    $processedFolders++
 
     $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
 
@@ -123,7 +128,10 @@ foreach ($folder in $folders) {
     Write-Host "Office application: $app"
 
     if ($app -eq "Access") {
-        Write-Host "Access is not supported at the moment. Skipping..."
+        Write-Host "Access database detected. Adding to Access folders list..."
+        $accessFolders += "${SourceDir}/${folder}"
+        $hasAccessDatabase = $true
+        Write-Host "Access is not supported in the main build process. Skipping build but tracking for separate processing..."
         continue
     }
 
@@ -139,6 +147,8 @@ foreach ($folder in $folders) {
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build-VBA.ps1 failed with exit code $LASTEXITCODE"
         exit $LASTEXITCODE
+    } else {
+        $successfulBuilds++
     }
   
     if ($TestFramework -ieq "rubberduck" -and $fileExtension -ne "ppam") {
@@ -160,3 +170,18 @@ foreach ($folder in $folders) {
 
     Write-Host "========================="
 }
+
+# Output variables for GitHub Actions
+Write-Host "Setting GitHub Actions outputs..."
+Write-Host "processed-folders=$processedFolders" >> $env:GITHUB_OUTPUT
+Write-Host "successful-builds=$successfulBuilds" >> $env:GITHUB_OUTPUT
+Write-Host "office-apps=$($officeApps -join ',')" >> $env:GITHUB_OUTPUT
+Write-Host "access-folders=$($accessFolders -join ',')" >> $env:GITHUB_OUTPUT
+Write-Host "has-access-database=$hasAccessDatabase" >> $env:GITHUB_OUTPUT
+
+Write-Host "Build process completed successfully!"
+Write-Host "Processed folders: $processedFolders"
+Write-Host "Successful builds: $successfulBuilds"
+Write-Host "Office apps used: $($officeApps -join ', ')"
+Write-Host "Access folders found: $($accessFolders -join ', ')"
+Write-Host "Has Access database: $hasAccessDatabase"
