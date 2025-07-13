@@ -6,7 +6,7 @@ For a demo on how to use this GitHub Action: [VBA-Build-Demo](https://github.com
 
 ## How does it work?
 
-This GitHub Action automates the process of building VBA-Enabled Office documents from XML and VBA source code:
+This GitHub Action automates the process of building VBA-Enabled Office documents from XML[^1] and VBA source code:
 
 The main script is contained in `Main.ps1` and will perform the following actions:
 
@@ -31,6 +31,7 @@ The main script is contained in `Main.ps1` and will perform the following action
 * Excel (.xlsm, .xlam and .xlsb)
 * Word (.docm)
 * PowerPoint (.pptm, .ppam)
+* Access[^2] (.accdb)
 
 ## Why? 
 
@@ -49,3 +50,6 @@ Depending on the reaction of the community, I might add support for:
 - Signature of the VBA Project (to facilitate distribution)
 - More complex file structure using [vba-block](https://www.vba-blocks.com/manifest/) configuration file (manifest file)
 - Microsoft Access file formats
+
+[^1]: All modern Office file formats for Word, PowerPoint and Excel are actually .zip file in disguse. Access is an exception in this case since the content of an Access Database (.accdb) is different and in order to do version control you'd have to use a tool like [msaccess-vcs-addin](https://github.com/joyfullservice/msaccess-vcs-addin). 
+[^2]: For Access, this GitHub Action makes use of msaccess-vcs-addin via [msaccess-vcs-build](https://github.com/AccessCodeLib/msaccess-vcs-build) meaning that you need to use the addin in Access to create the source material for the build.
