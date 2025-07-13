@@ -25,7 +25,6 @@ jobs:
         with:
           source-dir: "./tests_access"
           test-framework: "none"
-          office-app: "Access"
         timeout-minutes: 20
       - name: "Build Access Database (using msaccess-vcs-build action)"
         id: build_access_file
