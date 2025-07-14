@@ -1,4 +1,4 @@
 
 # Don't include test content in language statistics
-/tests/* linguist-detectable=false
-/tests_access/* linguist-detectable=false
+tests/* linguist-detectable=false
+tests_access/* linguist-detectable=false
