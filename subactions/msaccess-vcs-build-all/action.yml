@@ -17,10 +17,6 @@ inputs:
     description: 'VCS URL for the Access database add-in'
     required: false
     default: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
-  max-steps:
-    description: 'Maximum number of steps to run'
-    required: false
-    default: "5"
 
 runs:
   using: "composite"
@@ -35,7 +31,7 @@ runs:
         echo "count=${#VALS[@]}" >> $GITHUB_OUTPUT
 
     - name: Call action 0
-      if: ${{ fromJSON(inputs.max-steps) > 0 }}
+      if: ${{ fromJSON(steps.parse.outputs.count) > 0 }}
       uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
       with:
         source-dir: ${{ steps.parse.outputs.value0 }}
@@ -44,7 +40,7 @@ runs:
         vcs-url: ${{ inputs.vcs-url }}
 
     - name: Call action 1
-      if: ${{ fromJSON(inputs.max-steps) > 1 }}
+      if: ${{ fromJSON(steps.parse.outputs.count) > 1 }}
       uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
       with:
         source-dir: ${{ steps.parse.outputs.value1 }}
@@ -53,7 +49,7 @@ runs:
         vcs-url: ${{ inputs.vcs-url }}
 
     - name: Call action 2
-      if: ${{ fromJSON(inputs.max-steps) > 2 }}
+      if: ${{ fromJSON(steps.parse.outputs.count) > 2 }}
       uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
       with:
         source-dir: ${{ steps.parse.outputs.value2 }}
@@ -62,7 +58,7 @@ runs:
         vcs-url: ${{ inputs.vcs-url }}
 
     - name: Call action 3
-      if: ${{ fromJSON(inputs.max-steps) > 3 }}
+      if: ${{ fromJSON(steps.parse.outputs.count) > 3 }}
       uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
       with:
         source-dir: ${{ steps.parse.outputs.value3 }}
@@ -71,7 +67,7 @@ runs:
         vcs-url: ${{ inputs.vcs-url }}
 
     - name: Call action 4
-      if: ${{ fromJSON(inputs.max-steps) > 4 }}
+      if: ${{ fromJSON(steps.parse.outputs.count) > 4 }}
       uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
       with:
         source-dir: ${{ steps.parse.outputs.value4 }}
