@@ -173,13 +173,8 @@ foreach ($folder in $folders) {
 
 # Output variables for GitHub Actions
 Write-Host "Setting GitHub Actions outputs..."
-Write-Host "::set-output name=processed-folders::$processedFolders"
-Write-Host "::set-output name=successful-builds::$successfulBuilds"
-Write-Host "::set-output name=office-apps::$($officeApps -join ',')"
-Write-Host "::set-output name=access-folders::$($accessFolders -join ',')"
-Write-Host "::set-output name=has-access-database::$hasAccessDatabase"
 
-# Also write to GITHUB_OUTPUT file for newer runners
+# Write to GITHUB_OUTPUT file using the current recommended method
 "processed-folders=$processedFolders" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 "successful-builds=$successfulBuilds" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 "office-apps=$($officeApps -join ',')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8

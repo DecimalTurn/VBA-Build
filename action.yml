@@ -60,7 +60,7 @@ runs:
         $accessFolders = "${{ steps.run_vba_build.outputs.access-folders }}"
         $firstAccessFolder = ($accessFolders -split ',')[0].Trim()
         Write-Host "First Access folder: $firstAccessFolder"
-        Write-Host "first-access-folder=$firstAccessFolder" >> $env:GITHUB_OUTPUT
+        "first-access-folder=$firstAccessFolder" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
     - name: "Build Access Database (if detected)"
       if: steps.run_vba_build.outputs.has-access-database == 'True'
       id: "build_access"
