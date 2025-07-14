@@ -58,7 +58,7 @@ runs:
       shell: pwsh
       run: |
         $accessFolders = "${{ steps.run_vba_build.outputs.access-folders }}"
-        $firstAccessFolder = ($accessFolders -split ',')[0].Trim()
+        $firstAccessFolder = ($accessFolders -split '\|\|\|')[0].Trim()
         Write-Host "First Access folder: $firstAccessFolder"
         "first-access-folder=$firstAccessFolder" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
     - name: "Build Access Database (if detected)"

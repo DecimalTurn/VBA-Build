@@ -177,13 +177,13 @@ Write-Host "Setting GitHub Actions outputs..."
 # Write to GITHUB_OUTPUT file using the current recommended method
 "processed-folders=$processedFolders" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 "successful-builds=$successfulBuilds" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-"office-apps=$($officeApps -join ',')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-"access-folders=$($accessFolders -join ',')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"office-apps=$($officeApps -join '|||')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"access-folders=$($accessFolders -join '|||')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 "has-access-database=$hasAccessDatabase" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
 Write-Host "Build process completed successfully!"
 Write-Host "Processed folders: $processedFolders"
 Write-Host "Successful builds: $successfulBuilds"
-Write-Host "Office apps used: $($officeApps -join ', ')"
-Write-Host "Access folders found: $($accessFolders -join ', ')"
+Write-Host "Office apps used: $($officeApps -join ' ||| ')"
+Write-Host "Access folders found: $($accessFolders -join ' ||| ')"
 Write-Host "Has Access database: $hasAccessDatabase"
