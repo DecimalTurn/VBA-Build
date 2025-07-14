@@ -35,14 +35,6 @@ jobs:
           Write-Host "Office apps used: ${{ steps.build_vba.outputs.office-apps }}"
           Write-Host "Access folders found: ${{ steps.build_vba.outputs.access-folders }}"
           Write-Host "Has Access database: ${{ steps.build_vba.outputs.has-access-database }}"
-          
-          # You can also use these values in conditional logic
-          if ([int]"${{ steps.build_vba.outputs.successful-builds }}" -gt 0) {
-            Write-Host "✅ At least one build was successful!"
-          } else {
-            Write-Host "❌ No builds were successful!"
-          }
-          
           if ("${{ steps.build_vba.outputs.has-access-database }}" -eq "True") {
             Write-Host "✅ Access database(s) detected and will be processed!"
           } else {
