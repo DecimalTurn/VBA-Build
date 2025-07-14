@@ -1,0 +1,7 @@
+﻿CREATE TABLE [tabTest] (
+  [id] AUTOINCREMENT CONSTRAINT [PrimaryKey] PRIMARY KEY UNIQUE NOT NULL,
+  [RecDate] DATETIME,
+  [ProcName] VARCHAR (255),
+  [T] VARCHAR (255),
+  [N] LONG
+)

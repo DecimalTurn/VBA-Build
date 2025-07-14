@@ -1,4 +1,4 @@
-name: Test Build VBA
+name: Test Build VBA (with Access Database)
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,6 @@ on:
     paths-ignore:
       - '**/README.md'
       - '.devcontainer/**'
-      - '.github/workflows/tests_access.yml'
 
 permissions:
   id-token: write
@@ -24,28 +23,42 @@ jobs:
         id: build_vba
         uses: ./
         with:
-          source-dir: "./tests"
-          test-framework: "rubberduck"
+          source-dir: "./tests_access"
+          test-framework: "none"
         timeout-minutes: 20
+      - name: "Display Build Results"
+        shell: pwsh
+        run: |
+          Write-Host "Build completed with the following results:"
+          Write-Host "Processed folders: ${{ steps.build_vba.outputs.processed-folders }}"
+          Write-Host "Successful builds: ${{ steps.build_vba.outputs.successful-builds }}"
+          Write-Host "Office apps used: ${{ steps.build_vba.outputs.office-apps }}"
+          Write-Host "Access folders found: ${{ steps.build_vba.outputs.access-folders }}"
+          Write-Host "Has Access database: ${{ steps.build_vba.outputs.has-access-database }}"
+          if ("${{ steps.build_vba.outputs.has-access-database }}" -eq "True") {
+            Write-Host "✅ Access database(s) detected and will be processed!"
+          } else {
+            Write-Host "ℹ️ No Access databases found in source directory."
+          }
       - name: "Upload Build Artifact"
         uses: actions/upload-artifact@v4
         id: "upload"
         with:
           name: "VBA-Enabled-Documents"
-          path: "./tests/out/*"
+          path: "./tests_access/out/*"
           if-no-files-found: warn
       - name: "Take exiting screenshot"
         if: always()
         run: |
           . "./scripts/utils/Screenshot.ps1"
           # Create the directory if it does not exist
-          if (!(Test-Path -Path ${{ github.workspace }}/tests/screenshots)) {
-            New-Item -ItemType Directory -Path ${{ github.workspace }}/tests/screenshots
+          if (!(Test-Path -Path ${{ github.workspace }}/tests_access/screenshots)) {
+            New-Item -ItemType Directory -Path ${{ github.workspace }}/tests_access/screenshots
           }
           # Minimize PowerShell window
           . "./scripts/utils/Minimize.ps1"
           Minimize-Window "Administrator: C:\Program Files\PowerShell\7\pwsh.EXE"
-          Take-Screenshot -OutputPath ${{ github.workspace }}/tests/screenshots/ExitScreenshot.png
+          Take-Screenshot -OutputPath ${{ github.workspace }}/tests_access/screenshots/ExitScreenshot.png
         shell: pwsh      
       # TODO: Check if better method to visualize the screenshots: https://github.com/actions/upload-artifact/issues/14
       - name: "Upload Screenshots"
@@ -54,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "Screenshots"
-          path: "./tests/screenshots/*"
+          path: "./tests_access/screenshots/*"
           if-no-files-found: warn
       - name: "Attestation"
         uses: actions/attest-build-provenance@v2

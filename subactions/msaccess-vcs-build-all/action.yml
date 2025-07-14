@@ -1,0 +1,76 @@
+name: Run msaccess-vcs-build on all Access folders
+description: This action runs the msaccess-vcs-build action on all Access folders found in the source directory.
+
+inputs:
+
+  source-dir-values:
+    description: '|||-separated values to pass'
+    required: true
+  target-dir:
+    description: 'Target directory for the build output'
+    required: true
+  compile:
+    description: 'Whether to compile the Access database'
+    required: false
+    default: "false"
+  vcs-url:
+    description: 'VCS URL for the Access database add-in'
+    required: false
+    default: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
+
+runs:
+  using: "composite"
+  steps:
+    - id: parse
+      shell: bash
+      run: |
+        IFS='|||' read -ra VALS <<< "${{ inputs.source-dir-values }}"
+        for i in "${!VALS[@]}"; do
+          echo "value$i=${VALS[$i]}" >> $GITHUB_OUTPUT
+        done
+        echo "count=${#VALS[@]}" >> $GITHUB_OUTPUT
+
+    - name: Call action 0
+      if: ${{ fromJSON(steps.parse.outputs.count) > 0 }}
+      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      with:
+        source-dir: ${{ steps.parse.outputs.value0 }}
+        target-dir: ${{ inputs.target-dir }}
+        compile: ${{ inputs.compile }}
+        vcs-url: ${{ inputs.vcs-url }}
+
+    - name: Call action 1
+      if: ${{ fromJSON(steps.parse.outputs.count) > 1 }}
+      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      with:
+        source-dir: ${{ steps.parse.outputs.value1 }}
+        target-dir: ${{ inputs.target-dir }}
+        compile: ${{ inputs.compile }}
+        vcs-url: ${{ inputs.vcs-url }}
+
+    - name: Call action 2
+      if: ${{ fromJSON(steps.parse.outputs.count) > 2 }}
+      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      with:
+        source-dir: ${{ steps.parse.outputs.value2 }}
+        target-dir: ${{ inputs.target-dir }}
+        compile: ${{ inputs.compile }}
+        vcs-url: ${{ inputs.vcs-url }}
+
+    - name: Call action 3
+      if: ${{ fromJSON(steps.parse.outputs.count) > 3 }}
+      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      with:
+        source-dir: ${{ steps.parse.outputs.value3 }}
+        target-dir: ${{ inputs.target-dir }}
+        compile: ${{ inputs.compile }}
+        vcs-url: ${{ inputs.vcs-url }}
+
+    - name: Call action 4
+      if: ${{ fromJSON(steps.parse.outputs.count) > 4 }}
+      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      with:
+        source-dir: ${{ steps.parse.outputs.value4 }}
+        target-dir: ${{ inputs.target-dir }}
+        compile: ${{ inputs.compile }}
+        vcs-url: ${{ inputs.vcs-url }}

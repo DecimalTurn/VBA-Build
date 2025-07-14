@@ -1,7 +1,8 @@
 # Get the source directory from command line argument or use default "src"
 param(
     [string]$SourceDir = "src",
-    [string]$TestFramework = "none" # Default to "none" if not specified
+    [string]$TestFramework = "none", # Default to "none" if not specified
+    [string]$OfficeAppDetection = "automatic" # Default to "automatic" if not specified
 )
 
 Write-Host "Current directory: $(pwd)"
@@ -19,6 +20,10 @@ if ($folders.Count -eq 0) {
 }
 
 $officeApps = @()
+$processedFolders = 0
+$successfulBuilds = 0
+$accessFolders = @()
+$hasAccessDatabase = $false
 
 function Get-OfficeApp {
     param (
@@ -30,25 +35,41 @@ function Get-OfficeApp {
         '^(xlsb|xlsm||xltm|xlam)$' { return "Excel" }
         '^(docm|dotm)$' { return "Word" }
         '^(pptm|potm|ppam)$' { return "PowerPoint" }
-        '^(accdb|accda)$' { return "Access" }
+        '^(accdb|accda|accde)$' { return "Access" }
         default { return $null }
     }
 }
 
-# Create a list of Office applications that are needed based on the file extensions of the folders
-foreach ($folder in $folders) {
-    $FileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
-    $app = Get-OfficeApp -FileExtension $FileExtension
-    
-    if ($app) {
-        if ($officeApps -notcontains $app) {
-            $officeApps += $app
+if ($OfficeAppDetection -ieq "automatic") {
+
+    Write-Host "Automatic detection of Office applications based on file extensions"
+
+    # Create a list of Office applications that are needed based on the file extensions of the folders
+    foreach ($folder in $folders) {
+        $FileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
+        $app = Get-OfficeApp -FileExtension $FileExtension
+        
+        if ($app) {
+            if ($officeApps -notcontains $app) {
+                $officeApps += $app
+            }
+        } else {
+            Write-Host "Unknown file extension: $FileExtension. Skipping..."
+            continue
         }
-    } else {
-        Write-Host "Unknown file extension: $FileExtension. Skipping..."
-        continue
+    }
+    
+} else {
+    # We parse the OfficeApp parameter to get the name of the Office application
+    $officeApps = $OfficeAppDetection -split ","
+    $officeApps = $officeApps | ForEach-Object { $_.Trim() }
+    $officeApps = $officeApps | Where-Object { $_ -in @("Excel", "Word", "PowerPoint", "Access") }
+    if ($officeApps.Count -eq 0) {
+        Write-Host "No valid Office applications specified. Exiting script."
+        exit 1
     }
 }
+
 
 # We need to open and close the Office applications before we can enable VBOM
 Write-Host "Open and close Office applications"
@@ -85,15 +106,34 @@ Minimize-Window "Administrator: C:\actions"
 Write-Host "========================="
 
 foreach ($folder in $folders) {
-    $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
-    $app = Get-OfficeApp -FileExtension $fileExtension
-
-    if ($app -eq "Access") {
-        Write-Host "Access is not supported at the moment. Skipping..."
-        continue
-    }
 
     Write-Host "▶️ Processing folder: $folder"
+    $processedFolders++
+
+    $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
+
+    if ($OfficeAppDetection -ieq "automatic") {
+        $app = Get-OfficeApp -FileExtension $fileExtension
+    } elseif ($officeApps.Count -eq 1) {
+        # Note that when an array has only one element, PowerShell will treat it as a single value
+        $app = $officeApps
+    } elseif ($officeApps.Count -gt 1) {
+        Write-Host "Multiple Office applications specified. Please specify only one."
+        exit 1
+    } else {
+        Write-Host "No valid Office applications specified. Exiting script."
+        exit 1
+    }
+
+    Write-Host "Office application: $app"
+
+    if ($app -eq "Access") {
+        Write-Host "Access database detected. Adding to Access folders list..."
+        $accessFolders += "${SourceDir}/${folder}"
+        $hasAccessDatabase = $true
+        Write-Host "Access is not supported in the main build process. Skipping build but tracking for separate processing..."
+        continue
+    }
 
     $ext = "zip"
     Write-Host "Create Zip file and rename it to Office document target"
@@ -107,6 +147,8 @@ foreach ($folder in $folders) {
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build-VBA.ps1 failed with exit code $LASTEXITCODE"
         exit $LASTEXITCODE
+    } else {
+        $successfulBuilds++
     }
   
     if ($TestFramework -ieq "rubberduck" -and $fileExtension -ne "ppam") {
@@ -128,3 +170,20 @@ foreach ($folder in $folders) {
 
     Write-Host "========================="
 }
+
+# Output variables for GitHub Actions
+Write-Host "Setting GitHub Actions outputs..."
+
+# Write to GITHUB_OUTPUT file using the current recommended method
+"processed-folders=$processedFolders" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"successful-builds=$successfulBuilds" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"office-apps=$($officeApps -join '|||')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"access-folders=$($accessFolders -join '|||')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"has-access-database=$hasAccessDatabase" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+Write-Host "Build process completed successfully!"
+Write-Host "Processed folders: $processedFolders"
+Write-Host "Successful builds: $successfulBuilds"
+Write-Host "Office apps used: $($officeApps -join ' ||| ')"
+Write-Host "Access folders found: $($accessFolders -join ' ||| ')"
+Write-Host "Has Access database: $hasAccessDatabase"

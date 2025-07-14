@@ -14,6 +14,13 @@ inputs:
     description: 'The test framework to use for the build process.'
     required: false
     default: 'none'
+  office-app:
+    description: |
+      The Office application to install.
+      The default mode is automatic and will detect the app based on the folder name.
+      To force a specific app instead, use the options: Excel, Word, PowerPoint or Access.
+    required: false
+    default: 'automatic'
 
 runs:
   using: "composite"
@@ -38,9 +45,38 @@ runs:
         }
       shell: pwsh
     - name: "Run VBA Build"
+      id: "run_vba_build"
       shell: pwsh
-      run: '${{ github.action_path }}\Main.ps1 -SourceDir "${{ inputs.source-dir }}" -TestFramework "${{ inputs.test-framework }}"'
+      run: |
+        ${{ github.action_path }}\Main.ps1 `
+          -SourceDir "${{ inputs['source-dir'] }}" `
+          -TestFramework "${{ inputs['test-framework'] }}" `
+          -OfficeAppDetection "${{ inputs['office-app'] }}"
+    - name: "Build Access Database (if detected)"
+      if: steps.run_vba_build.outputs.has-access-database == 'True'
+      id: "build_access"
+      uses: ./subactions/msaccess-vcs-build-all
+      with:
+        source-dir-values: "${{ steps.run_vba_build.outputs.access-folders }}"
+        target-dir: "${{ inputs['source-dir'] }}/out"
+        compile: "false"
+        vcs-url: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
 outputs:
-  result:
-    description: "The result of the VBA build process."
-    value: "success"
+  processed-folders:
+    description: "Number of folders processed during the build"
+    value: ${{ steps.run_vba_build.outputs.processed-folders }}
+  successful-builds:
+    description: "Number of successful builds completed"
+    value: ${{ steps.run_vba_build.outputs.successful-builds }}
+  office-apps:
+    description: "Comma-separated list of Office applications used"
+    value: ${{ steps.run_vba_build.outputs.office-apps }}
+  access-folders:
+    description: "Comma-separated list of Access database source folders"
+    value: ${{ steps.run_vba_build.outputs.access-folders }}
+  has-access-database:
+    description: "Boolean indicating if any Access database folders were found"
+    value: ${{ steps.run_vba_build.outputs.has-access-database }}
+  first-access-folder:
+    description: "The first Access database folder that was processed (if any)"
+    value: ${{ steps.extract_access_folder.outputs.first-access-folder }}

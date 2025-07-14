@@ -1,0 +1,24 @@
+﻿{
+  "Info": {
+    "Class": "clsDbNavPaneGroup",
+    "Description": "Navigation Pane Custom Groups"
+  },
+  "Items": {
+    "Categories": [
+      {
+        "Name": "Custom",
+        "Flags": 0,
+        "Position": 2,
+        "Groups": [
+          {
+            "Name": "Custom Group 1",
+            "Flags": 0,
+            "Position": 2,
+            "Objects": [
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
