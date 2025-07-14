@@ -52,23 +52,12 @@ runs:
           -SourceDir "${{ inputs['source-dir'] }}" `
           -TestFramework "${{ inputs['test-framework'] }}" `
           -OfficeAppDetection "${{ inputs['office-app'] }}"
-    - name: "Extract first Access folder"
-      if: steps.run_vba_build.outputs.has-access-database == 'True'
-      id: "extract_access_folder"
-      shell: pwsh
-      run: |
-        $accessFolders = "${{ steps.run_vba_build.outputs.access-folders }}"
-        $firstAccessFolder = ($accessFolders -split '\|\|\|')[0].Trim()
-        Write-Host "First Access folder: $firstAccessFolder"
-        "first-access-folder=$firstAccessFolder" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
     - name: "Build Access Database (if detected)"
       if: steps.run_vba_build.outputs.has-access-database == 'True'
       id: "build_access"
-      uses: AccessCodeLib/msaccess-vcs-build@main
+      uses: ./subactions/msaccess-vcs-build-all
       with:
-        # Use the first Access folder extracted from the previous step. 
-        # TODO: Handle case where there are more than one Access folder and build them all
-        source-dir: "${{ steps.extract_access_folder.outputs.first-access-folder }}"
+        source-dir-values: "${{ steps.run_vba_build.outputs.access-folders }}"
         target-dir: "${{ inputs['source-dir'] }}/out"
         compile: "false"
         vcs-url: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
