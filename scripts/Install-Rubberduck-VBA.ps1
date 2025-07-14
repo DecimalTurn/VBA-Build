@@ -233,12 +233,23 @@ if (-not $rubberduckInstallPath) {
 Write-Host "⏳ Downloading and installing CLI-Friendly DLL components..."
 
 # Define the artifact URL and download location
+$rubberduckSha = "3d4539a5e1e340f34dcaaea5607e65f6e3d766f6771b8aeee386b15ac8ae50ae"
 $artifactUrl = "https://github.com/DecimalTurn/Rubberduck/releases/download/v2.5.92.6373-CLI-Friendly-v0.1.0/rubberduck-v2.5.92.6373-CLI-Friendly-v0.1.0.zip"
 $artifactZipPath = "$env:TEMP\RubberduckArtifacts.zip"
 $rubberduckInstallDir = $rubberduckInstallPath  # Use the path returned by Test-RubberduckInstalled
 
 Write-Host "📥 Downloading artifacts from $artifactUrl"
 Invoke-WebRequest -Uri $artifactUrl -OutFile $artifactZipPath
+
+Write-Host "🔍 Verifying artifact SHA256 checksum..."
+$computedSha = Get-FileHash -Path $artifactZipPath -Algorithm SHA256 | Select-Object -ExpandProperty Hash
+if ($computedSha -ne $rubberduckSha) {
+    Write-Host "❌ SHA256 checksum verification failed!"
+    Write-Host "Expected: $rubberduckSha"
+    Write-Host "Computed: $computedSha"
+    throw "SHA256 checksum verification failed. The downloaded file may be corrupted or tampered with."
+}
+Write-Host "✅ SHA256 checksum verification succeeded."
 
 Write-Host "📦 Extracting artifacts to $rubberduckInstallDir"
 Expand-Archive -Path $artifactZipPath -DestinationPath $rubberduckInstallDir -Force
