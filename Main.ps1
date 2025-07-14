@@ -173,11 +173,18 @@ foreach ($folder in $folders) {
 
 # Output variables for GitHub Actions
 Write-Host "Setting GitHub Actions outputs..."
-Write-Host "processed-folders=$processedFolders" >> $env:GITHUB_OUTPUT
-Write-Host "successful-builds=$successfulBuilds" >> $env:GITHUB_OUTPUT
-Write-Host "office-apps=$($officeApps -join ',')" >> $env:GITHUB_OUTPUT
-Write-Host "access-folders=$($accessFolders -join ',')" >> $env:GITHUB_OUTPUT
-Write-Host "has-access-database=$hasAccessDatabase" >> $env:GITHUB_OUTPUT
+Write-Host "::set-output name=processed-folders::$processedFolders"
+Write-Host "::set-output name=successful-builds::$successfulBuilds"
+Write-Host "::set-output name=office-apps::$($officeApps -join ',')"
+Write-Host "::set-output name=access-folders::$($accessFolders -join ',')"
+Write-Host "::set-output name=has-access-database::$hasAccessDatabase"
+
+# Also write to GITHUB_OUTPUT file for newer runners
+"processed-folders=$processedFolders" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"successful-builds=$successfulBuilds" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"office-apps=$($officeApps -join ',')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"access-folders=$($accessFolders -join ',')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"has-access-database=$hasAccessDatabase" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
 Write-Host "Build process completed successfully!"
 Write-Host "Processed folders: $processedFolders"
