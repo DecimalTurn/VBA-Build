@@ -66,6 +66,8 @@ runs:
       id: "build_access"
       uses: AccessCodeLib/msaccess-vcs-build@main
       with:
+        # Use the first Access folder extracted from the previous step. 
+        # TODO: Handle case where there are more than one Access folder and build them all
         source-dir: "${{ steps.extract_access_folder.outputs.first-access-folder }}"
         target-dir: "${{ inputs['source-dir'] }}/out"
         compile: "false"
