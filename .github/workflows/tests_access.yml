@@ -8,7 +8,7 @@ on:
     paths-ignore:
       - '**/README.md'
       - '.devcontainer/**'
-      - '.giattributes`
+      - '.gitattributes'
       - 'scripts/Install-Rubberduck-VBA.ps1'
 
 permissions:

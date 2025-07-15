@@ -61,7 +61,7 @@ runs:
         target-dir: "${{ inputs['source-dir'] }}/out"
         compile: "false"
         vcs-url: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
-        expected-sha256: "sha256:03e61d7c569cee55a960b23695d9128c79f2b21bff658ea52bc3849a9e351de8"
+        expected-sha256: "03e61d7c569cee55a960b23695d9128c79f2b21bff658ea52bc3849a9e351de8"
 outputs:
   processed-folders:
     description: "Number of folders processed during the build"
