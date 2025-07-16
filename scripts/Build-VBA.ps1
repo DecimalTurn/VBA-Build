@@ -29,6 +29,12 @@ $srcDir = GetAbsPath -path $folderName -basePath $currentDir
 
 $fileName = GetDirName $srcDir
 $fileNameNoExt = $fileName.Substring(0, $fileName.LastIndexOf('.'))
+
+# We need to remove the second extension in case of .xlsb.xlsm, .xltm.xlsm, or .ppam.pptm
+if ($fileName.EndsWith(".xltm.xlsm")) {
+    $fileNameNoExt = $fileNameNoExt.Substring(0, $fileNameNoExt.LastIndexOf('.'))
+}   
+
 $fileExtension = $fileName.Substring($fileName.LastIndexOf('.') + 1)
 
 $outputDir = (DirUp $srcDir) + "out/"
@@ -39,7 +45,8 @@ if ($outputFilePath.EndsWith(".xlsb")) {
 }
 
 if ($outputFilePath.EndsWith(".xltm")) {
-    $outputFilePath = $outputFilePath -replace "\.xltm$", ".xltm.xlsm"
+    Write-Host ".xltm unsupported, please use .xltm.xlsm instead"
+    exit 1
 }
 
 if ($outputFilePath.EndsWith(".ppam")) {
