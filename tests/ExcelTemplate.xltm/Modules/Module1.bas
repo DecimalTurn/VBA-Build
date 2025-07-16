@@ -13,7 +13,7 @@ Sub WriteToFile()
     Dim fileNum As Integer
     
     ' Specify the path to the text file
-    filePath = ThisWorkbook.Path & "\ExcelWorkbook.txt"
+    filePath = ThisWorkbook.Path & "\ExcelTemplate.txt"
     
     ' Get a free file number
     fileNum = FreeFile

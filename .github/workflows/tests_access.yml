@@ -10,6 +10,7 @@ on:
       - '.devcontainer/**'
       - '.gitattributes'
       - 'scripts/Install-Rubberduck-VBA.ps1'
+      - '/tests/**'
 
 permissions:
   id-token: write
