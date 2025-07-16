@@ -330,9 +330,9 @@ try {
             Write-Host "Document saved as .xlsb"
         
         # Check if the extension is .xltm and if so save as .xltm
-        } elseif ($outputFilePath.EndsWith(".xltm")) {
+        } elseif ($outputFilePath.EndsWith(".xltm.xlsm")) {
             $oldFilePath = $outputFilePath
-            $outputFilePath = $outputFilePath -replace "\.xltm$", ".xltm.xlsm"
+            $outputFilePath = $outputFilePath -replace "\.xltm\.xlsm$", ".xltm"
             # Replace forward slashes with backslashes
             $outputFilePath = $outputFilePath -replace "/", "\"
             Write-Host "Saving document as .xltm: $outputFilePath"
