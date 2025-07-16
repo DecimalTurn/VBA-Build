@@ -17,6 +17,9 @@ inputs:
     description: 'VCS URL for the Access database add-in'
     required: false
     default: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
+  expected-sha256:
+    description: 'Expected SHA256 digest of the VCS asset (optional - if not provided, will be fetched from release)'
+    required: false
 
 runs:
   using: "composite"
@@ -29,6 +32,36 @@ runs:
           echo "value$i=${VALS[$i]}" >> $GITHUB_OUTPUT
         done
         echo "count=${#VALS[@]}" >> $GITHUB_OUTPUT
+
+    - id: verify-vcs-digest
+      name: Verify VCS release asset digest
+      shell: bash
+      run: |
+        echo "Fetching release information from: ${{ inputs.vcs-url }}"
+        RELEASE_DATA=$(curl -s "${{ inputs.vcs-url }}")
+        ACTUAL_SHA=$(echo "$RELEASE_DATA" | jq -r '.assets[0].digest // empty' | sed 's/sha256://')
+        
+        if [[ -z "$ACTUAL_SHA" ]]; then
+          echo "Error: Could not extract SHA256 digest from release at ${{ inputs.vcs-url }}"
+          exit 1
+        fi
+        
+        if [[ -n "${{ inputs.expected-sha256 }}" ]]; then
+          echo "Expected SHA256: ${{ inputs.expected-sha256 }}"
+          echo "Actual SHA256: $ACTUAL_SHA"
+          
+          if [[ "${{ inputs.expected-sha256 }}" != "$ACTUAL_SHA" ]]; then
+            echo "Error: SHA256 digest mismatch!"
+            echo "Expected: ${{ inputs.expected-sha256 }}"
+            echo "Actual: $ACTUAL_SHA"
+            exit 1
+          fi
+          
+          echo "SHA256 digest verification passed!"
+        else
+          echo "No expected SHA256 provided, skipping verification."
+          echo "Current release SHA256: $ACTUAL_SHA"
+        fi
 
     - name: Call action 0
       if: ${{ fromJSON(steps.parse.outputs.count) > 0 }}

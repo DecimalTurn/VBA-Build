@@ -143,11 +143,22 @@
 # Download the latest version of Rubberduck from GitHub
 # The URL is constructed using the latest release version from the Rubberduck GitHub repository.
 # The script uses the Invoke-WebRequest cmdlet to download the installer to a temporary location.
+$rubberduckCoreSha256 = "03e84992109359f9779630c08fb8bfa44f79d20d9122f8e7cef1df26fc92a6ff"
 $rubberduckUrl = "https://github.com/rubberduck-vba/Rubberduck/releases/download/v2.5.91/Rubberduck.Setup.2.5.9.6316.exe"
-
 
 $tempInstallerPath = "$env:TEMP\Rubberduck.Setup.exe"
 Invoke-WebRequest -Uri $rubberduckUrl -OutFile $tempInstallerPath
+
+# Verify the SHA256 checksum of the downloaded installer
+# This step ensures that the downloaded file is not corrupted or tampered with.
+$computedSha = Get-FileHash -Path $tempInstallerPath -Algorithm SHA256 | Select-Object -ExpandProperty Hash
+if ($computedSha -ne $rubberduckCoreSha256) {
+    Write-Host "❌ SHA256 checksum verification failed!"
+    Write-Host "Expected: $rubberduckCoreSha256"
+    Write-Host "Computed: $computedSha"
+    throw "SHA256 checksum verification failed. The downloaded file may be corrupted or tampered with."
+}
+Write-Host "✅ SHA256 checksum verification succeeded. For Rubberduck core."
 
 # Step 2:
 # Install Rubberduck using the Inno Setup installer with specified command line options
@@ -233,12 +244,23 @@ if (-not $rubberduckInstallPath) {
 Write-Host "⏳ Downloading and installing CLI-Friendly DLL components..."
 
 # Define the artifact URL and download location
+$rubberduckCliSha256 = "3d4539a5e1e340f34dcaaea5607e65f6e3d766f6771b8aeee386b15ac8ae50ae"
 $artifactUrl = "https://github.com/DecimalTurn/Rubberduck/releases/download/v2.5.92.6373-CLI-Friendly-v0.1.0/rubberduck-v2.5.92.6373-CLI-Friendly-v0.1.0.zip"
 $artifactZipPath = "$env:TEMP\RubberduckArtifacts.zip"
 $rubberduckInstallDir = $rubberduckInstallPath  # Use the path returned by Test-RubberduckInstalled
 
 Write-Host "📥 Downloading artifacts from $artifactUrl"
 Invoke-WebRequest -Uri $artifactUrl -OutFile $artifactZipPath
+
+Write-Host "🔍 Verifying artifact SHA256 checksum..."
+$computedSha = Get-FileHash -Path $artifactZipPath -Algorithm SHA256 | Select-Object -ExpandProperty Hash
+if ($computedSha -ne $rubberduckCliSha256) {
+    Write-Host "❌ SHA256 checksum verification failed!"
+    Write-Host "Expected: $rubberduckCliSha256"
+    Write-Host "Computed: $computedSha"
+    throw "SHA256 checksum verification failed. The downloaded file may be corrupted or tampered with."
+}
+Write-Host "✅ SHA256 checksum verification succeeded. For CLI-Friendly components."
 
 Write-Host "📦 Extracting artifacts to $rubberduckInstallDir"
 Expand-Archive -Path $artifactZipPath -DestinationPath $rubberduckInstallDir -Force
