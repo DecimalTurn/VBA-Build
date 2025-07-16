@@ -339,7 +339,7 @@ try {
             $doc.SaveAs($outputFilePath, 53) # 53 is the xlOpenXMLTemplateMacroEnabled file format for .xltm
             # Delete the .xltm.xlsm file
             Remove-Item -Path $oldFilePath -Force
-            Write-Host "Document saved as .xltm"
+            Write-Host "Document saved as .xltm at ${doc.Path}"
 
         } else {
             $doc.Save()
