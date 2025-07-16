@@ -324,6 +324,13 @@ try {
             # Delete the .xlsb.xlsm file
             Remove-Item -Path $oldFilePath -Force
             Write-Host "Document saved as .xlsb"
+        
+        # Check if the extension is .xltm and if so save as .xltm
+        } elseif ($outputFilePath.EndsWith(".xltm")) {
+            Write-Host "Saving document as .xltm: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 53) # 53 is the xlOpenXMLTemplateMacroEnabled file format
+            Write-Host "Document saved as .xltm"
+
         } else {
             $doc.Save()
             Write-Host "Document saved successfully"
