@@ -26,6 +26,11 @@ if ($fileExtension -eq "xlsb") {
     $fileExtension = "xlsb.xlsm"
 }
 
+# Since dealing with .xltm files directly is not straightforward, we will save them as .xltm.xlsm
+if ($fileExtension -eq "xltm") {
+    $fileExtension = "xltm.xlsm"
+}
+
 # Since we can't edit the .ppam file directly, we will use the .pptm file extension
 if ($fileExtension -eq "ppam") {
     $fileExtension = "ppam.pptm"
