@@ -2,3 +2,6 @@
 # Don't include test content in language statistics
 tests/** linguist-detectable=false
 tests_access/** linguist-detectable=false
+
+# Don't include devcontainer files
+.devcontainer/** linguist-detectable=false
