@@ -3,9 +3,12 @@
   "extends": [
     "config:recommended"
   ],
-  "regexManagers": [
+  "customManagers": [
     {
-      "fileMatch": ["^subactions/.*?/action\\.yml$"],
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^subactions/.*?/action\\.yml$/"
+      ],
       "matchStrings": [
         "uses:\\s+(?<dep>[^\\s@]+)@(?<currentValue>[^\\s]+)"
       ],
