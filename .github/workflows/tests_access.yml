@@ -10,6 +10,7 @@ on:
       - '.devcontainer/**'
       - '.gitattributes'
       - 'scripts/Install-Rubberduck-VBA.ps1'
+      - '.github/workflows/image_similarity_check.yml'
 
 permissions:
   id-token: write
