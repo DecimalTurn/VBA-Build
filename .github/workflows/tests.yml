@@ -65,3 +65,39 @@ jobs:
         with:
           subject-name: "VBA-Enabled-Documents"
           subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
+  build-check:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v5
+        
+      - name: "Download Build Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "Screenshots"
+          path: "./tests/screenshots"
+          
+      - name: "Check Screenshot Similarity"
+        run: |
+          # Install ImageMagick for image comparison
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+          
+          # Compare images and get similarity score
+          echo "Comparing screenshots..."
+          SIMILARITY=$(compare -metric RMSE "./images/fixtures/ExitScreenshot.png" "./tests/screenshots/ExitScreenshot.png" null: 2>&1)
+          echo "Similarity: $SIMILARITY"
+          
+          # Extract the numeric value from the similarity output
+          VALUE=$(echo $SIMILARITY | grep -oE '[0-9]+(\.[0-9]+)?')
+          echo "Difference value: $VALUE"
+          
+          # Fail if difference is too large (adjust threshold as needed)
+          if (( $(echo "$VALUE > 0.1" | bc -l) )); then
+            echo "Screenshots differ significantly!"
+            exit 1
+          else
+            echo "Screenshots are similar enough."
+          fi
+        shell: bash
