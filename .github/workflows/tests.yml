@@ -67,7 +67,7 @@ jobs:
           path: "./tests/screenshots/*"
           if-no-files-found: warn
       - name: "Attestation"
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-name: "VBA-Enabled-Documents"
           subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
