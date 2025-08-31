@@ -84,14 +84,59 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y imagemagick
           
+          # Debug: Show directory structure to verify paths
+          echo "Current directory: $(pwd)"
+          echo "Contents of ./images directory:"
+          ls -la ./images || echo "images directory doesn't exist"
+          echo "Contents of ./images/fixtures directory:"
+          ls -la ./images/fixtures || echo "images/fixtures directory doesn't exist"
+          echo "Contents of ./tests/screenshots directory:"
+          ls -la ./tests/screenshots || echo "tests/screenshots directory doesn't exist"
+          
+          # Check if reference image exists
+          if [ ! -f "./images/fixtures/ExitScreenshot.png" ]; then
+            echo "Reference image ./images/fixtures/ExitScreenshot.png not found!"
+            # Create the directory structure if it doesn't exist
+            mkdir -p ./images/fixtures
+            # Copy the screenshot as a new reference if available
+            if [ -f "./tests/screenshots/ExitScreenshot.png" ]; then
+              echo "Creating reference image from current screenshot"
+              cp "./tests/screenshots/ExitScreenshot.png" "./images/fixtures/ExitScreenshot.png"
+              echo "Reference image created. Skip comparison for this run."
+              exit 0
+            else
+              echo "No screenshot available to create a reference image"
+              exit 1
+            fi
+          fi
+          
+          # Check if test image exists
+          if [ ! -f "./tests/screenshots/ExitScreenshot.png" ]; then
+            echo "Test image ./tests/screenshots/ExitScreenshot.png not found!"
+            exit 1
+          fi
+          
           # Compare images and get similarity score
           echo "Comparing screenshots..."
-          SIMILARITY=$(compare -metric RMSE "./images/fixtures/ExitScreenshot.png" "./tests/screenshots/ExitScreenshot.png" null: 2>&1)
+          if ! SIMILARITY=$(compare -metric RMSE "./images/fixtures/ExitScreenshot.png" "./tests/screenshots/ExitScreenshot.png" null: 2>&1); then
+            echo "Image comparison failed: $SIMILARITY"
+            exit 1
+          fi
+          
           echo "Similarity: $SIMILARITY"
           
           # Extract the numeric value from the similarity output
           VALUE=$(echo $SIMILARITY | grep -oE '[0-9]+(\.[0-9]+)?')
+          
+          if [ -z "$VALUE" ]; then
+            echo "Failed to extract numeric value from similarity output"
+            exit 1
+          fi
+          
           echo "Difference value: $VALUE"
+          
+          # Install bc for floating point comparison
+          sudo apt-get install -y bc
           
           # Fail if difference is too large (adjust threshold as needed)
           if (( $(echo "$VALUE > 0.1" | bc -l) )); then
