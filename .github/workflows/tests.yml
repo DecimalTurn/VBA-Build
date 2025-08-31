@@ -19,7 +19,6 @@ on:
       - '.gitattributes'
       - '.devcontainer/**'
       - '.github/workflows/tests_access.yml'
-      - '.github/workflows/image_similarity_check.yml'
 
 permissions:
   id-token: write
@@ -72,8 +71,7 @@ jobs:
         with:
           subject-name: "VBA-Enabled-Documents"
           subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
-  build-check:
-    if: github.event.inputs.run_checks == 'true'
+  build-check:    
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -90,7 +88,7 @@ jobs:
         run: |
           # Install ImageMagick for image comparison
           sudo apt-get update
-          sudo apt-get install -y imagemagick
+          sudo apt-get install -y imagemagick bc
           
           # Debug: Show directory structure to verify paths
           echo "Current directory: $(pwd)"
@@ -126,28 +124,35 @@ jobs:
           
           # Compare images and get similarity score
           echo "Comparing screenshots..."
-          if ! SIMILARITY=$(compare -metric RMSE "./images/fixtures/ExitScreenshot.png" "./tests/screenshots/ExitScreenshot.png" null: 2>&1); then
-            echo "Image comparison failed: $SIMILARITY"
-            exit 1
-          fi
+          SIMILARITY=$(compare -metric RMSE "./images/fixtures/ExitScreenshot.png" "./tests/screenshots/ExitScreenshot.png" null: 2>&1) || true
           
-          echo "Similarity: $SIMILARITY"
+          echo "Similarity output: $SIMILARITY"
           
           # Extract the numeric value from the similarity output
-          VALUE=$(echo $SIMILARITY | grep -oE '[0-9]+(\.[0-9]+)?')
+          # The output typically looks like: "467.579 (0.0071348)" where 0.0071348 is the normalized value
+          # We want to extract that normalized value
+          NORMALIZED_VALUE=$(echo $SIMILARITY | grep -oE '\([0-9]+(\.[0-9]+)?\)' | tr -d '()')
           
-          if [ -z "$VALUE" ]; then
-            echo "Failed to extract numeric value from similarity output"
-            exit 1
+          if [ -z "$NORMALIZED_VALUE" ]; then
+            echo "Failed to extract normalized value from similarity output"
+            # Fall back to the first numeric value if normalized value not found
+            VALUE=$(echo $SIMILARITY | grep -oE '[0-9]+(\.[0-9]+)?' | head -1)
+            if [ -z "$VALUE" ]; then
+              echo "Failed to extract any numeric value from similarity output"
+              exit 1
+            fi
+            echo "Using first numeric value: $VALUE"
+          else
+            VALUE=$NORMALIZED_VALUE
+            echo "Using normalized value: $VALUE"
           fi
           
-          echo "Difference value: $VALUE"
+          # Fail if difference is too large
+          # Adjusted threshold to 0.01 (1%) since the normalized value is between 0-1
+          THRESHOLD=0.01
+          echo "Difference value: $VALUE (threshold: $THRESHOLD)"
           
-          # Install bc for floating point comparison
-          sudo apt-get install -y bc
-          
-          # Fail if difference is too large (adjust threshold as needed)
-          if (( $(echo "$VALUE > 0.1" | bc -l) )); then
+          if (( $(echo "$VALUE > $THRESHOLD" | bc -l) )); then
             echo "Screenshots differ significantly!"
             exit 1
           else
