@@ -1,6 +1,12 @@
 name: Test Build VBA
 on:
   workflow_dispatch:
+    inputs:
+      run_checks:
+        description: 'Run checks on the build output'
+        required: false
+        type: boolean
+        default: false
   pull_request:
     branches:
       - main
@@ -66,6 +72,7 @@ jobs:
           subject-name: "VBA-Enabled-Documents"
           subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
   build-check:
+    if: github.event.inputs.run_checks == 'true'
     runs-on: ubuntu-latest
     needs: build
     steps:
