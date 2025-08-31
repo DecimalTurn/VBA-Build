@@ -103,6 +103,9 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$PSScriptRoot/scripts/Clean-Up.ps1" # Import the Clean-Up.ps1 script
 
 Minimize-Window "Administrator: C:\actions"
+Minimize-Window "C:\ProgramData\GitHub\HostedComputeAgent\hosted-compute-agent"
+
+
 Write-Host "========================="
 
 foreach ($folder in $folders) {
