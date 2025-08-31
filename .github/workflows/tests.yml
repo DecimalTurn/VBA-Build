@@ -19,6 +19,7 @@ on:
       - '.gitattributes'
       - '.devcontainer/**'
       - '.github/workflows/tests_access.yml'
+      - '.github/workflows/image_similarity_check.yml'
 
 permissions:
   id-token: write
