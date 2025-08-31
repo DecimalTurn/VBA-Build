@@ -1,0 +1,140 @@
+name: Screenshot Similarity Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Run ID to download artifacts from (leave empty for latest)'
+        required: false
+        default: ''
+
+jobs:
+  check-similarity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v5
+        
+      - name: "Get latest successful run ID"
+        if: github.event.inputs.run_id == ''
+        id: get-latest-run
+        run: |
+          # Install GitHub CLI
+          sudo apt-get update && sudo apt-get install -y gh
+          
+          # Authenticate with GitHub CLI using the workflow token
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          
+          # Get the latest successful run ID of the main workflow
+          LATEST_RUN_ID=$(gh run list --repo ${{ github.repository }} --workflow tests.yml --status completed --limit 1 --json databaseId --jq '.[0].databaseId')
+          
+          if [ -z "$LATEST_RUN_ID" ]; then
+            echo "No successful runs found"
+            exit 1
+          fi
+          
+          echo "Latest successful run ID: $LATEST_RUN_ID"
+          echo "run_id=$LATEST_RUN_ID" >> $GITHUB_OUTPUT
+        shell: bash
+        
+      - name: "Set run ID"
+        id: set-run-id
+        run: |
+          if [ -n "${{ github.event.inputs.run_id }}" ]; then
+            echo "Using provided run ID: ${{ github.event.inputs.run_id }}"
+            echo "run_id=${{ github.event.inputs.run_id }}" >> $GITHUB_OUTPUT
+          else
+            echo "Using latest run ID: ${{ steps.get-latest-run.outputs.run_id }}"
+            echo "run_id=${{ steps.get-latest-run.outputs.run_id }}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+        
+      - name: "Download Screenshots from Artifact"
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: tests.yml
+          run_id: ${{ steps.set-run-id.outputs.run_id }}
+          name: "Screenshots"
+          path: "./tests/screenshots"
+          
+      - name: "Check Screenshot Similarity"
+        run: |
+          # Install ImageMagick for image comparison
+          sudo apt-get update
+          sudo apt-get install -y imagemagick bc
+          
+          # Debug: Show directory structure to verify paths
+          echo "Current directory: $(pwd)"
+          echo "Contents of ./images directory:"
+          ls -la ./images || echo "images directory doesn't exist"
+          echo "Contents of ./images/fixtures directory:"
+          ls -la ./images/fixtures || echo "images/fixtures directory doesn't exist"
+          echo "Contents of ./tests/screenshots directory:"
+          ls -la ./tests/screenshots || echo "tests/screenshots directory doesn't exist"
+          
+          # Check if reference image exists
+          if [ ! -f "./images/fixtures/ExitScreenshot.png" ]; then
+            echo "Reference image ./images/fixtures/ExitScreenshot.png not found!"
+            # Create the directory structure if it doesn't exist
+            mkdir -p ./images/fixtures
+            # Copy the screenshot as a new reference if available
+            if [ -f "./tests/screenshots/ExitScreenshot.png" ]; then
+              echo "Creating reference image from current screenshot"
+              cp "./tests/screenshots/ExitScreenshot.png" "./images/fixtures/ExitScreenshot.png"
+              echo "Reference image created. Skip comparison for this run."
+              exit 0
+            else
+              echo "No screenshot available to create a reference image"
+              exit 1
+            fi
+          fi
+          
+          # Check if test image exists
+          if [ ! -f "./tests/screenshots/ExitScreenshot.png" ]; then
+            echo "Test image ./tests/screenshots/ExitScreenshot.png not found!"
+            exit 1
+          fi
+          
+          # Compare images and get similarity score
+          echo "Comparing screenshots..."
+          if ! SIMILARITY=$(compare -metric RMSE "./images/fixtures/ExitScreenshot.png" "./tests/screenshots/ExitScreenshot.png" null: 2>&1); then
+            echo "Image comparison failed: $SIMILARITY"
+            exit 1
+          fi
+          
+          echo "Similarity: $SIMILARITY"
+          
+          # Extract the numeric value from the similarity output
+          VALUE=$(echo $SIMILARITY | grep -oE '[0-9]+(\.[0-9]+)?')
+          
+          if [ -z "$VALUE" ]; then
+            echo "Failed to extract numeric value from similarity output"
+            exit 1
+          fi
+          
+          echo "Difference value: $VALUE"
+          
+          # Fail if difference is too large (adjust threshold as needed)
+          if (( $(echo "$VALUE > 0.1" | bc -l) )); then
+            echo "Screenshots differ significantly!"
+            exit 1
+          else
+            echo "Screenshots are similar enough."
+          fi
+        shell: bash
+        
+      # - name: "Create Issue if Check Fails"
+      #   if: failure()
+      #   run: |
+      #     # Install GitHub CLI if not already installed
+      #     command -v gh >/dev/null 2>&1 || {
+      #       sudo apt-get update && sudo apt-get install -y gh
+      #       echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      #     }
+          
+      #     # Create an issue
+      #     gh issue create \
+      #       --title "Screenshot Similarity Check Failed" \
+      #       --body "The screenshot similarity check failed for run ID ${{ steps.set-run-id.outputs.run_id }}. Please check the workflow run for more details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+      #       --label "bug"
+      #   shell: bash
