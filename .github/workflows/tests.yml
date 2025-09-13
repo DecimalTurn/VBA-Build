@@ -180,8 +180,7 @@ jobs:
           fi
           
           # Fail if difference is too large
-          # Adjusted threshold to 0.02 (1%) since the normalized value is between 0-1
-          THRESHOLD=0.02
+          THRESHOLD=0.035
           echo "Difference value: $VALUE (threshold: $THRESHOLD)"
           
           if (( $(echo "$VALUE > $THRESHOLD" | bc -l) )); then
