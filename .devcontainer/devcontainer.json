@@ -12,7 +12,8 @@
         "ms-azuretools.vscode-docker",
         "NotisDataAnalytics.vba-lsp",
         "GitHub.copilot-chat",
-        "ms-azuretools.vscode-containers"
+        "ms-azuretools.vscode-containers",
+        "github.vscode-github-actions"
       ],
       "settings": {
         "extensions.experimental.preferPreReleases": {
