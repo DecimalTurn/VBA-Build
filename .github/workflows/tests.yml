@@ -40,6 +40,20 @@ jobs:
           source-dir: "./tests"
           test-framework: "rubberduck"
         timeout-minutes: 20
+      - name: "Display Build Results"
+        shell: pwsh
+        run: |
+          Write-Host "Build completed with the following results:"
+          Write-Host "Processed folders: ${{ steps.build_vba.outputs.processed-folders }}"
+          Write-Host "Successful builds: ${{ steps.build_vba.outputs.successful-builds }}"
+          Write-Host "Office apps used: ${{ steps.build_vba.outputs.office-apps }}"
+          Write-Host "Access folders found: ${{ steps.build_vba.outputs.access-folders }}"
+          Write-Host "Has Access database: ${{ steps.build_vba.outputs.has-access-database }}"
+          if ("${{ steps.build_vba.outputs.has-access-database }}" -eq "True") {
+            Write-Host "✅ Access database(s) detected and will be processed!"
+          } else {
+            Write-Host "ℹ️ No Access databases found in source directory."
+          }
       - name: "Upload Build Artifact"
         uses: actions/upload-artifact@v4
         id: "upload"
