@@ -26,7 +26,10 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        windows-version: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.windows-version }}
     steps:
       - name: "Checkout"
         uses: actions/checkout@v5
@@ -41,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v4
         id: "upload"
         with:
-          name: "VBA-Enabled-Documents"
+          name: "VBA-Enabled-Documents-${{ matrix.windows-version }}"
           path: "./tests/out/*"
           if-no-files-found: warn
       - name: "Take exiting screenshot"
@@ -55,7 +58,8 @@ jobs:
           # Minimize PowerShell window
           . "./scripts/utils/Minimize.ps1"
           Minimize-Window "Administrator: C:\Program Files\PowerShell\7\pwsh.EXE"
-          Take-Screenshot -OutputPath ${{ github.workspace }}/tests/screenshots/ExitScreenshot.png
+          $windowsVersion = "${{ matrix.windows-version }}"
+          Take-Screenshot -OutputPath ${{ github.workspace }}/tests/screenshots/ExitScreenshot_$windowsVersion.png
         shell: pwsh      
       # TODO: Check if better method to visualize the screenshots: https://github.com/actions/upload-artifact/issues/14
       - name: "Upload Screenshots"
@@ -63,17 +67,20 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: "Screenshots"
+          name: "Screenshots-${{ matrix.windows-version }}"
           path: "./tests/screenshots/*"
           if-no-files-found: warn
       - name: "Attestation"
         uses: actions/attest-build-provenance@v3
         with:
-          subject-name: "VBA-Enabled-Documents"
+          subject-name: "VBA-Enabled-Documents-${{ matrix.windows-version }}"
           subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
   build-check:    
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      matrix:
+        windows-version: [windows-2022, windows-2025]
     steps:
       - name: "Checkout"
         uses: actions/checkout@v5
@@ -81,7 +88,7 @@ jobs:
       - name: "Download Build Artifact"
         uses: actions/download-artifact@v5
         with:
-          name: "Screenshots"
+          name: "Screenshots-${{ matrix.windows-version }}"
           path: "./tests/screenshots"
           
       - name: "Check Screenshot Similarity"
@@ -89,6 +96,10 @@ jobs:
           # Install ImageMagick for image comparison
           sudo apt-get update
           sudo apt-get install -y imagemagick bc
+          
+          # Get Windows version from matrix
+          WINDOWS_VERSION="${{ matrix.windows-version }}"
+          echo "Checking screenshot for Windows version: $WINDOWS_VERSION"
           
           # Debug: Show directory structure to verify paths
           echo "Current directory: $(pwd)"
@@ -99,15 +110,22 @@ jobs:
           echo "Contents of ./tests/screenshots directory:"
           ls -la ./tests/screenshots || echo "tests/screenshots directory doesn't exist"
           
+          # Set filenames based on Windows version
+          REFERENCE_IMAGE="./images/fixtures/ExitScreenshot_${WINDOWS_VERSION}.png"
+          TEST_IMAGE="./tests/screenshots/ExitScreenshot_${WINDOWS_VERSION}.png"
+          
+          echo "Reference image path: $REFERENCE_IMAGE"
+          echo "Test image path: $TEST_IMAGE"
+          
           # Check if reference image exists
-          if [ ! -f "./images/fixtures/ExitScreenshot.png" ]; then
-            echo "Reference image ./images/fixtures/ExitScreenshot.png not found!"
+          if [ ! -f "$REFERENCE_IMAGE" ]; then
+            echo "Reference image $REFERENCE_IMAGE not found!"
             # Create the directory structure if it doesn't exist
             mkdir -p ./images/fixtures
             # Copy the screenshot as a new reference if available
-            if [ -f "./tests/screenshots/ExitScreenshot.png" ]; then
+            if [ -f "$TEST_IMAGE" ]; then
               echo "Creating reference image from current screenshot"
-              cp "./tests/screenshots/ExitScreenshot.png" "./images/fixtures/ExitScreenshot.png"
+              cp "$TEST_IMAGE" "$REFERENCE_IMAGE"
               echo "Reference image created. Skip comparison for this run."
               exit 0
             else
@@ -117,14 +135,14 @@ jobs:
           fi
           
           # Check if test image exists
-          if [ ! -f "./tests/screenshots/ExitScreenshot.png" ]; then
-            echo "Test image ./tests/screenshots/ExitScreenshot.png not found!"
+          if [ ! -f "$TEST_IMAGE" ]; then
+            echo "Test image $TEST_IMAGE not found!"
             exit 1
           fi
           
           # Compare images and get similarity score
           echo "Comparing screenshots..."
-          SIMILARITY=$(compare -metric RMSE "./images/fixtures/ExitScreenshot.png" "./tests/screenshots/ExitScreenshot.png" null: 2>&1) || true
+          SIMILARITY=$(compare -metric RMSE "$REFERENCE_IMAGE" "$TEST_IMAGE" null: 2>&1) || true
           
           echo "Similarity output: $SIMILARITY"
           
