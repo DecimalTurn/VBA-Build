@@ -18,7 +18,6 @@ on:
       - '**/README.md'
       - '.gitattributes'
       - '.devcontainer/**'
-      - '.github/workflows/tests_access.yml'
 
 permissions:
   id-token: write
