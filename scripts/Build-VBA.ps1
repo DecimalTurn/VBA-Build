@@ -43,6 +43,14 @@ if ($outputFilePath.EndsWith(".xltm")) {
     $outputFilePath = $outputFilePath -replace "\.xltm$", ".xltm.xlsm"
 }
 
+if ($outputFilePath.EndsWith(".dotm")) {
+    $outputFilePath = $outputFilePath -replace "\.dotm$", ".dotm.docm"
+}
+
+if ($outputFilePath.EndsWith(".potm")) {
+    $outputFilePath = $outputFilePath -replace "\.potm$", ".potm.pptm"
+}
+
 if ($outputFilePath.EndsWith(".ppam")) {
     $outputFilePath = $outputFilePath -replace "\.ppam$", ".ppam.pptm"
 }
@@ -296,9 +304,23 @@ Write-Host "Saving document..."
 $oldFilePath = ""
 try {
     if ($officeAppName -eq "Word") {
-        # For PowerPoint, use SaveAs with the same file name to force save
-        $doc.SaveAs($outputFilePath)
-        Write-Host "Document saved using SaveAs method"
+        # For Word, check if the file name ends with .dotm.docm
+        # If so, we need to save as .dotm
+        if ($outputFilePath.EndsWith(".dotm.docm")) {
+            $oldFilePath = $outputFilePath
+            $outputFilePath = $outputFilePath -replace "\.dotm\.docm$", ".dotm"
+            # Replace forward slashes with backslashes
+            $outputFilePath = $outputFilePath -replace "/", "\"
+            Write-Host "Saving document as .dotm: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 15) # 15 is the wdFormatXMLTemplateMacroEnabled file format for .dotm
+            # Delete the .dotm.docm file
+            Remove-Item -Path $oldFilePath -Force
+            Write-Host "Document saved as .dotm at ${doc.Path}"
+        } else {
+            # We just use SaveAs since it's a normal Word document
+            $doc.SaveAs($outputFilePath)
+            Write-Host "Document saved using SaveAs method"
+        }
     } elseif ($officeAppName -eq "PowerPoint") {
         # For PowerPoint, we need to check if the file name ends with .ppam.pptm
         # If so, we need to save as .ppam
@@ -312,6 +334,19 @@ try {
             # Delete the .ppam.pptm file
             Remove-Item -Path $oldFilePath -Force
             Write-Host "Document saved as .ppam"
+
+        # Check if the extension is .potm and if so save as .potm
+        } elseif ($outputFilePath.EndsWith(".potm.pptm")) {
+            $oldFilePath = $outputFilePath
+            $outputFilePath = $outputFilePath -replace "\.potm\.pptm$", ".potm"
+            # Replace forward slashes with backslashes
+            $outputFilePath = $outputFilePath -replace "/", "\"
+            Write-Host "Saving document as .potm: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 17) # 17 is the ppSaveAsOpenXMLTemplateMacroEnabled file format for .potm
+            # Delete the .potm.pptm file
+            Remove-Item -Path $oldFilePath -Force
+            Write-Host "Document saved as .potm"
+
         } else {
             $doc.Save()
             Write-Host "Document saved successfully"

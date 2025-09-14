@@ -31,6 +31,16 @@ if ($fileExtension -eq "xltm") {
     $fileExtension = "xltm.xlsm"
 }
 
+# Since we can't edit the .dotm file directly, we will use the .dotm.docm file extension
+if ($fileExtension -eq "dotm") {
+    $fileExtension = "dotm.docm"
+}
+
+# Since we can't edit the .potm file directly, we will use the .potm.pptm file extension
+if ($fileExtension -eq "potm") {
+    $fileExtension = "potm.pptm"
+}
+
 # Since we can't edit the .ppam file directly, we will use the .pptm file extension
 if ($fileExtension -eq "ppam") {
     $fileExtension = "ppam.pptm"
