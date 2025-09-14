@@ -43,6 +43,10 @@ if ($outputFilePath.EndsWith(".xltm")) {
     $outputFilePath = $outputFilePath -replace "\.xltm$", ".xltm.xlsm"
 }
 
+if ($outputFilePath.EndsWith(".dotm")) {
+    $outputFilePath = $outputFilePath -replace "\.dotm$", ".dotm.docm"
+}
+
 if ($outputFilePath.EndsWith(".ppam")) {
     $outputFilePath = $outputFilePath -replace "\.ppam$", ".ppam.pptm"
 }
@@ -341,6 +345,18 @@ try {
             # Delete the .xltm.xlsm file
             Remove-Item -Path $oldFilePath -Force
             Write-Host "Document saved as .xltm at ${doc.Path}"
+            
+        # Check if the extension is .dotm and if so save as .dotm
+        } elseif ($outputFilePath.EndsWith(".dotm.docm")) {
+            $oldFilePath = $outputFilePath
+            $outputFilePath = $outputFilePath -replace "\.dotm\.docm$", ".dotm"
+            # Replace forward slashes with backslashes
+            $outputFilePath = $outputFilePath -replace "/", "\"
+            Write-Host "Saving document as .dotm: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 16) # 16 is the wdFormatXMLTemplateMacroEnabled file format for .dotm
+            # Delete the .dotm.docm file
+            Remove-Item -Path $oldFilePath -Force
+            Write-Host "Document saved as .dotm at ${doc.Path}"
 
         } else {
             $doc.Save()
