@@ -46,9 +46,10 @@ This could be used to:
 ## What's next?
 
 Depending on the reaction of the community, I might add support for:
-- Template formats .xltm, .dotm and .potm
-- Signature of the VBA Project (to facilitate distribution)
+- Create a seperate action named vba-setup that contains all the setup steps needed to run VBA code for better modularity
+- Allow unit tests to run on Microsoft Access files
 - More complex file structure using [vba-block](https://www.vba-blocks.com/manifest/) configuration file (manifest file)
+- Signature of the VBA Project (to facilitate distribution)
 - Microsoft Access .accde file format
 
 [^1]: All modern Office file formats for Word, PowerPoint and Excel are actually .zip files in disguse. Access is an exception in this case since the content of an Access Database (.accdb) is different and in order to do version control you'd have to use a tool like [msaccess-vcs-addin](https://github.com/joyfullservice/msaccess-vcs-addin). 
