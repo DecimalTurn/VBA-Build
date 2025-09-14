@@ -16,7 +16,7 @@ Public Sub ExecuteWrite()
     Dim fileNum As Integer
 
     ' Specify the path to the text file
-    filePath = ThisDocument.Path & "\WordDocument.txt"
+    filePath = ThisDocument.Path & "\WordTemplate.txt"
 
     ' Get a free file number
     fileNum = FreeFile
