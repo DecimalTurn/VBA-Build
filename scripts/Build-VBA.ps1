@@ -29,6 +29,7 @@ $srcDir = GetAbsPath -path $folderName -basePath $currentDir
 
 $fileName = GetDirName $srcDir
 $fileNameNoExt = $fileName.Substring(0, $fileName.LastIndexOf('.'))
+
 $fileExtension = $fileName.Substring($fileName.LastIndexOf('.') + 1)
 
 $outputDir = (DirUp $srcDir) + "out/"
@@ -36,6 +37,10 @@ $outputFilePath = $outputDir + $fileName
 
 if ($outputFilePath.EndsWith(".xlsb")) {
     $outputFilePath = $outputFilePath -replace "\.xlsb$", ".xlsb.xlsm"
+}
+
+if ($outputFilePath.EndsWith(".xltm")) {
+    $outputFilePath = $outputFilePath -replace "\.xltm$", ".xltm.xlsm"
 }
 
 if ($outputFilePath.EndsWith(".ppam")) {
@@ -324,6 +329,19 @@ try {
             # Delete the .xlsb.xlsm file
             Remove-Item -Path $oldFilePath -Force
             Write-Host "Document saved as .xlsb"
+        
+        # Check if the extension is .xltm and if so save as .xltm
+        } elseif ($outputFilePath.EndsWith(".xltm.xlsm")) {
+            $oldFilePath = $outputFilePath
+            $outputFilePath = $outputFilePath -replace "\.xltm\.xlsm$", ".xltm"
+            # Replace forward slashes with backslashes
+            $outputFilePath = $outputFilePath -replace "/", "\"
+            Write-Host "Saving document as .xltm: $outputFilePath"
+            $doc.SaveAs($outputFilePath, 53) # 53 is the xlOpenXMLTemplateMacroEnabled file format for .xltm
+            # Delete the .xltm.xlsm file
+            Remove-Item -Path $oldFilePath -Force
+            Write-Host "Document saved as .xltm at ${doc.Path}"
+
         } else {
             $doc.Save()
             Write-Host "Document saved successfully"
