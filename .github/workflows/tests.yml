@@ -54,7 +54,7 @@ jobs:
             Write-Host "ℹ️ No Access databases found in source directory."
           }
       - name: "Upload Build Artifact"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         id: "upload"
         with:
           name: "VBA-Enabled-Documents-${{ matrix.windows-version }}"
@@ -78,7 +78,7 @@ jobs:
       - name: "Upload Screenshots"
         # Run this step even if the build failed
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: "Screenshots-${{ matrix.windows-version }}"
           path: "./tests/screenshots/*"
@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@v5
         
       - name: "Download Build Artifact"
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: "Screenshots-${{ matrix.windows-version }}"
           path: "./tests/screenshots"
