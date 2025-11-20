@@ -31,7 +31,7 @@ jobs:
     runs-on: ${{ matrix.windows-version }}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: "Build VBA-Enabled Documents (using own action)"
         id: build_vba
         uses: ./
@@ -96,7 +96,7 @@ jobs:
         windows-version: [windows-2022, windows-2025]
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         
       - name: "Download Build Artifact"
         uses: actions/download-artifact@v6
