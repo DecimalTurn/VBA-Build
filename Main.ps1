@@ -70,27 +70,14 @@ if ($OfficeAppDetection -ieq "automatic") {
     }
 }
 
-
-# We need to open and close the Office applications before we can enable VBOM
-Write-Host "Open and close Office applications"
-. "$PSScriptRoot/scripts/Open-Close-Office.ps1" $officeApps
-Write-Host "========================="
-
-
+# VBA runtime setup (Office installation, app preparation and security settings)
+# is handled by the setup-vba action before this script runs.
 if ($TestFramework -ieq "rubberduck") {
     Write-Host "Install Rubberduck"
     . "$PSScriptRoot/scripts/Install-Rubberduck-VBA.ps1"
     Write-Host "========================="
 } else {
     Write-Host "Test framework is not Rubberduck. Skipping installation."
-}
-
-# Enable VBOM for each Office application
-Write-Host "Enabling VBOM for Office applications"
-foreach ($app in $officeApps) {
-    Write-Host "Enabling VBOM for $app"
-    . "$PSScriptRoot/scripts/Enable-VBOM.ps1" $app
-    Write-Host "========================="
 }
 
 # To get better screenshots we need to minimize the "Administrator" CMD window

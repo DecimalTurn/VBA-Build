@@ -27,11 +27,16 @@ jobs:
   build:
     strategy:
       matrix:
-        windows-version: [windows-2022, windows-2025]
+        windows-version: [windows-2025]
     runs-on: ${{ matrix.windows-version }}
     steps:
       - name: "Checkout"
         uses: actions/checkout@v6
+      - name: "Setup VBA runtime"
+        uses: DecimalTurn/setup-vba@75c6ce5e714186234ef9090c1c77537a60bd7339 # v0.1.1
+        with:
+          office-apps: "Excel,Word,PowerPoint,Access"
+          install-office: "true"
       - name: "Build VBA-Enabled Documents (using own action)"
         id: build_vba
         uses: ./
@@ -93,7 +98,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        windows-version: [windows-2022, windows-2025]
+        windows-version: [windows-2025]
     steps:
       - name: "Checkout"
         uses: actions/checkout@v6
