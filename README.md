@@ -8,10 +8,11 @@ For a demo on how to use this GitHub Action: [VBA-Build-Demo](https://github.com
 
 This GitHub Action automates the process of building VBA-Enabled Office documents from XML[^1] and VBA source code:
 
+Before running this action, initialize the runner with [setup-vba](https://github.com/DecimalTurn/setup-vba).
+
 The main script is contained in `Main.ps1` and will perform the following actions:
 
 - Install 7-Zip for handling file compression
-- Install Office 365 (via Chocolatey) to provide the Office applications needed
 - Create Office file from XML source:
     - Find the XML source files representing your Office document structure
     - Compress them into a zip file using 7-Zip
@@ -46,7 +47,6 @@ This could be used to:
 ## What's next?
 
 Depending on the reaction of the community, I might add support for:
-- Create a seperate action named vba-setup that contains all the setup steps needed to run VBA code for better modularity
 - Allow unit tests to run on Microsoft Access files
 - More complex file structure using [vba-block](https://www.vba-blocks.com/manifest/) configuration file (manifest file)
 - Signature of the VBA Project (to facilitate distribution)

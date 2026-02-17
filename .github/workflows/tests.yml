@@ -32,6 +32,11 @@ jobs:
     steps:
       - name: "Checkout"
         uses: actions/checkout@v6
+      - name: "Setup VBA runtime"
+        uses: DecimalTurn/setup-vba@994cd22d56880328d0c81437117438d78e2117a6
+        with:
+          office-apps: "Excel,Word,PowerPoint,Access"
+          install-office: "true"
       - name: "Build VBA-Enabled Documents (using own action)"
         id: build_vba
         uses: ./

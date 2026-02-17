@@ -28,22 +28,6 @@ runs:
     - name: "Install 7-zip"
       shell: pwsh
       run: choco install 7zip.install
-    # https://community.chocolatey.org/packages?q=Excel
-    - name: "Installing Office 365 (takes about 5 minutes...)"
-      id: "install_office"
-      shell: pwsh
-      run: choco install office365proplus -y
-    - name: "Display Chocolatey logs in case of Office install failure"
-      if: failure() && steps.install_office.outcome == 'failure'
-      run: |
-        if (Test-Path -Path "C:\ProgramData\chocolatey\logs\chocolatey.log") {
-          Write-Host "============ Chocolatey Log Contents ============"
-          Get-Content -Path "C:\ProgramData\chocolatey\logs\chocolatey.log"
-          Write-Host "============ End of Chocolatey Logs ============="
-        } else {
-          Write-Host "Chocolatey log file not found at C:\ProgramData\chocolatey\logs\chocolatey.log"
-        }
-      shell: pwsh
     - name: "Run VBA Build"
       id: "run_vba_build"
       shell: pwsh
