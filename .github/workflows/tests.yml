@@ -27,7 +27,7 @@ jobs:
   build:
     strategy:
       matrix:
-        windows-version: [windows-2022, windows-2025]
+        windows-version: [windows-2025]
     runs-on: ${{ matrix.windows-version }}
     steps:
       - name: "Checkout"
@@ -98,7 +98,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        windows-version: [windows-2022, windows-2025]
+        windows-version: [windows-2025]
     steps:
       - name: "Checkout"
         uses: actions/checkout@v6
