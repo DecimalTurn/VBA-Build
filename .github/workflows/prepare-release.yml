@@ -1,0 +1,126 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Which part of the version to bump (major, minor, patch)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      remove_suffix:
+        description: 'Remove pre-release suffix (e.g. -alpha)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get current version
+        id: current_version
+        run: |
+          latest_tag=$(git tag --sort=-v:refname | sed -nE '/^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/p' | head -n1)
+          if [[ -z "$latest_tag" ]]; then
+            current="0.0.0"
+          else
+            current="${latest_tag#v}"
+          fi
+
+          base="${current%%-*}"
+          if [[ "$current" == *-* ]]; then
+            suffix="${current#*-}"
+          else
+            suffix=""
+          fi
+          echo "Current version: $current (base=$base, suffix=$suffix)"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "suffix=$suffix" >> "$GITHUB_OUTPUT"
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          IFS='.' read -r major minor patch <<< "${{ steps.current_version.outputs.base }}"
+          case "${{ github.event.inputs.version_bump }}" in
+            major)
+              ((major+=1)); minor=0; patch=0;;
+            minor)
+              ((minor+=1)); patch=0;;
+            patch)
+              ((patch+=1));;
+          esac
+          new_version="$major.$minor.$patch"
+
+          suffix="${{ steps.current_version.outputs.suffix }}"
+          if [[ -n "$suffix" && "${{ github.event.inputs.remove_suffix }}" != "true" ]]; then
+            new_version="$new_version-$suffix"
+          fi
+
+          echo "Next version: $new_version"
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$new_version" >> "$GITHUB_OUTPUT"
+
+      - name: Update VERSION file
+        run: |
+          NEW_VERSION="${{ steps.next_version.outputs.version }}"
+          echo "$NEW_VERSION" > VERSION
+
+      - name: Update CHANGELOG.md
+        run: |
+          NEW_VERSION="${{ steps.next_version.outputs.version }}"
+          TODAY="$(date +%Y-%m-%d)"
+
+          if ! grep -q "^## \[$NEW_VERSION\]" CHANGELOG.md; then
+            awk -v ver="$NEW_VERSION" -v dt="$TODAY" '
+              {
+                print
+                if (!inserted && $0 == "## [Unreleased]") {
+                  print ""
+                  print "## [" ver "] - " dt
+                  inserted=1
+                }
+              }
+            ' CHANGELOG.md > CHANGELOG.md.tmp
+            mv CHANGELOG.md.tmp CHANGELOG.md
+          fi
+
+          release_url="https://github.com/${{ github.repository }}/releases/tag/v$NEW_VERSION"
+          if ! grep -q "^\[$NEW_VERSION\]:" CHANGELOG.md; then
+            echo "[$NEW_VERSION]: $release_url" >> CHANGELOG.md
+          fi
+
+      - name: Commit changes
+        id: commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add VERSION CHANGELOG.md
+          git commit -m "chore: bump version to ${{ steps.next_version.outputs.version }}"
+          git push origin ${{ github.ref_name }}
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Create Draft Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.next_version.outputs.tag }}
+          target_commitish: ${{ steps.commit.outputs.sha }}
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
