@@ -1,0 +1,52 @@
+name: Post Release
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  update-major-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve major tag alias
+        id: resolve
+        shell: bash
+        run: |
+          release_tag="${{ github.event.release.tag_name }}"
+          echo "Release tag: $release_tag"
+
+          if [[ "$release_tag" =~ ^v([0-9]+)(\.[0-9]+){0,2}$ ]]; then
+            major_tag="v${BASH_REMATCH[1]}"
+            echo "major_tag=$major_tag" >> "$GITHUB_OUTPUT"
+            echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release tag does not match v<major>, v<major>.<minor>, or v<major>.<minor>.<patch>; skipping."
+            echo "major_tag=" >> "$GITHUB_OUTPUT"
+            echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update major tag to latest release
+        if: steps.resolve.outputs.major_tag != ''
+        shell: bash
+        run: |
+          release_tag="${{ steps.resolve.outputs.release_tag }}"
+          major_tag="${{ steps.resolve.outputs.major_tag }}"
+
+          git fetch --tags --force
+          target_sha="$(git rev-list -n 1 "$release_tag")"
+
+          git tag -fa "$major_tag" "$target_sha" -m "Update $major_tag to $release_tag"
+          git push origin "refs/tags/$major_tag" --force
+
+          echo "Updated $major_tag -> $release_tag ($target_sha)"
