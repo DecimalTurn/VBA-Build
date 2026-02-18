@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-02-18
+
 ## [1.4.0] - 2025-09-14
 ### Added
 - Support for building Access files (`.accdb`) via `msaccess-vcs-build`.
@@ -51,3 +53,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [1.1.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v1.0.0
 [0.1.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v0.1.0
+[2.0.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v2.0.0
