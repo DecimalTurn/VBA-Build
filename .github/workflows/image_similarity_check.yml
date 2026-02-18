@@ -50,7 +50,7 @@ jobs:
         shell: bash
         
       - name: "Download Screenshots from Artifact"
-        uses: dawidd6/action-download-artifact@v14
+        uses: dawidd6/action-download-artifact@v15
         with:
           workflow: tests.yml
           run_id: ${{ steps.set-run-id.outputs.run_id }}
