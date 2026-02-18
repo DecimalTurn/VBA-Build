@@ -124,3 +124,13 @@ jobs:
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add release link to summary
+        run: |
+          release_url="https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
+          {
+            echo "## Release prepared"
+            echo ""
+            echo "- Tag: \`${{ steps.next_version.outputs.tag }}\`"
+            echo "- Draft release: [$release_url]($release_url)"
+          } >> "$GITHUB_STEP_SUMMARY"
