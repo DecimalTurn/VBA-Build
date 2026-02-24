@@ -48,7 +48,7 @@ This could be used to:
 
 Depending on the reaction of the community, I might add support for:
 - Allow unit tests to run on Microsoft Access files
-- More complex file structure using [vba-block](https://www.vba-blocks.com/manifest/) configuration file (manifest file)
+- More complex file structure using [vbaproject.toml](https://github.com/vbapm/core/blob/main/README.md#manifest-vbaprojecttoml) configuration file (manifest file)
 - Signature of the VBA Project (to facilitate distribution)
 - Microsoft Access .accde file format
 
