@@ -33,7 +33,7 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v6
       - name: "Setup VBA runtime"
-        uses: DecimalTurn/setup-vba@75c6ce5e714186234ef9090c1c77537a60bd7339 # v0.1.1
+        uses: DecimalTurn/setup-vba@abad6bed4025d3d709cbd9c9281f856d298bd68d # v0.1.2
         with:
           office-apps: "Excel,Word,PowerPoint,Access"
           install-office: "true"
