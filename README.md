@@ -29,9 +29,9 @@ The main script is contained in `Main.ps1` and will perform the following action
 
 ## Supported File Formats
 
-* Excel (.xlsm, .xlam and .xlsb)
-* Word (.docm)
-* PowerPoint (.pptm, .ppam)
+* Excel (.xlsm, .xlam, .xlsb and .xltm)
+* Word (.docm and .dotm)
+* PowerPoint (.pptm, .ppam and .potm)
 * Access[^2] (.accdb)
 
 ## Why? 
