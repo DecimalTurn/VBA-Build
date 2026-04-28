@@ -3,6 +3,8 @@
   "extends": [
     "config:recommended"
   ],
+  "minimumReleaseAge": "5 days",
+  "prCreation": "not-pending",
   "customManagers": [
     {
       "customType": "regex",
