@@ -4,9 +4,9 @@ FROM mcr.microsoft.com/powershell:latest
 # Use bash for apt operations
 SHELL ["/bin/bash", "-c"]
    
-# Install Git
+# Install Git and Python 3
 RUN apt-get update && \
-    apt-get install -y git
+    apt-get install -y git python3
 
 # Configure Git aliases
 RUN git config --global alias.undo "reset --soft HEAD^" && \
