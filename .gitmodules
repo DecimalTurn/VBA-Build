@@ -1,0 +1,3 @@
+[submodule "external/pyOpenVBA"]
+	path = external/pyOpenVBA
+	url = https://github.com/WilliamSmithEdward/pyOpenVBA
