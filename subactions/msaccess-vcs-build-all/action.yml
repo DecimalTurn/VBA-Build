@@ -16,7 +16,7 @@ inputs:
   vcs-url:
     description: 'VCS URL for the Access database add-in'
     required: false
-    default: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
+    default: "https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1"
   expected-sha256:
     description: 'Expected SHA256 digest of the VCS asset (optional - if not provided, will be fetched from release)'
     required: false
@@ -40,10 +40,20 @@ runs:
         echo "Fetching release information from: ${{ inputs.vcs-url }}"
         RELEASE_DATA=$(curl -s "${{ inputs.vcs-url }}")
         ACTUAL_SHA=$(echo "$RELEASE_DATA" | jq -r '.assets[0].digest // empty' | sed 's/sha256://')
-        
+
         if [[ -z "$ACTUAL_SHA" ]]; then
-          echo "Error: Could not extract SHA256 digest from release at ${{ inputs.vcs-url }}"
-          exit 1
+          echo "SHA256 digest not available from API. Downloading asset to compute it locally..."
+          DOWNLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[0].browser_download_url // empty')
+          if [[ -z "$DOWNLOAD_URL" ]]; then
+            echo "Error: Could not find download URL for release asset."
+            exit 1
+          fi
+          echo "Downloading: $DOWNLOAD_URL"
+          TMP_ZIP=$(mktemp)
+          curl -sL -o "$TMP_ZIP" "$DOWNLOAD_URL"
+          ACTUAL_SHA=$(sha256sum "$TMP_ZIP" | cut -d' ' -f1)
+          rm -f "$TMP_ZIP"
+          echo "Computed SHA256: $ACTUAL_SHA"
         fi
         
         if [[ -n "${{ inputs.expected-sha256 }}" ]]; then
@@ -65,7 +75,7 @@ runs:
 
     - name: Call action 0
       if: ${{ fromJSON(steps.parse.outputs.count) > 0 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value0 }}
         target-dir: ${{ inputs.target-dir }}
@@ -74,7 +84,7 @@ runs:
 
     - name: Call action 1
       if: ${{ fromJSON(steps.parse.outputs.count) > 1 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value1 }}
         target-dir: ${{ inputs.target-dir }}
@@ -83,7 +93,7 @@ runs:
 
     - name: Call action 2
       if: ${{ fromJSON(steps.parse.outputs.count) > 2 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value2 }}
         target-dir: ${{ inputs.target-dir }}
@@ -92,7 +102,7 @@ runs:
 
     - name: Call action 3
       if: ${{ fromJSON(steps.parse.outputs.count) > 3 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value3 }}
         target-dir: ${{ inputs.target-dir }}
@@ -101,7 +111,7 @@ runs:
 
     - name: Call action 4
       if: ${{ fromJSON(steps.parse.outputs.count) > 4 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value4 }}
         target-dir: ${{ inputs.target-dir }}

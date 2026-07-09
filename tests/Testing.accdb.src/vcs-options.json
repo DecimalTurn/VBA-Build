@@ -1,0 +1,37 @@
+﻿{
+  "Info": {
+    "AddinVersion": "5.0.0",
+    "AccessVersion": "16.0 64-bit"
+  },
+  "Options": {
+    "ExportFolder": "",
+    "UseFastSave": false,
+    "SplitLayoutFromVBA": true,
+    "ExportFormatVersion": "5.0.0",
+    "RunBeforeExport": "",
+    "RunAfterExport": "",
+    "RunBeforeBuild": "",
+    "RunAfterBuild": "",
+    "RunBeforeMerge": "",
+    "RunAfterMerge": "",
+    "SanitizeLevel": 2,
+    "SanitizeColors": 1,
+    "SaveQuerySQL": true,
+    "FormatSQL": true,
+    "UseDeterministicQueryExport": true,
+    "SaveTableSQL": true,
+    "SavePrintVars": true,
+    "ExtractThemeFiles": false,
+    "UseEnvForConnections": 0,
+    "ForceImportOriginalQuerySQL": false,
+    "UseMergeBuild": false,
+    "ShowDebug": false,
+    "BreakOnError": true,
+    "StripPublishOption": true,
+    "PreserveRubberDuckID": false,
+    "HashAlgorithm": "SHA256",
+    "UseShortHash": true,
+    "UseGitIntegration": false,
+    "ShowVCSLegacy": true
+  }
+}

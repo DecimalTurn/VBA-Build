@@ -1,0 +1,24 @@
+﻿{
+  "Info": {
+    "Class": "clsDbTableDef",
+    "Description": "Linked Table"
+  },
+  "Items": {
+    "Name": "tblLinkedCSV",
+    "Connect": "Text;DSN=Linked Link Specification;FMT=Delimited;HDR=NO;IMEX=2;CharacterSet=437;ACCDB=YES;DATABASE=rel:",
+    "SourceTableName": "Linked.csv",
+    "Attributes": 1073741824,
+    "TableProperties": {
+      "Description": {
+        "Type": 10,
+        "Value": "This is simply a test CSV file that were are linking to."
+      }
+    },
+    "Properties": {
+      "Description": {
+        "Type": 10,
+        "Value": "This is simply a test CSV file that were are linking to."
+      }
+    }
+  }
+}
