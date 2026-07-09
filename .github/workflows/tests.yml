@@ -37,7 +37,7 @@ jobs:
         with:
           office-apps: "Excel,Word,PowerPoint,Access"
           install-office: "true"
-          office-language: "fr-fr"
+          # office-language: "fr-fr"
       - name: "Build VBA-Enabled Documents (using own action)"
         id: build_vba
         uses: ./
