@@ -40,10 +40,20 @@ runs:
         echo "Fetching release information from: ${{ inputs.vcs-url }}"
         RELEASE_DATA=$(curl -s "${{ inputs.vcs-url }}")
         ACTUAL_SHA=$(echo "$RELEASE_DATA" | jq -r '.assets[0].digest // empty' | sed 's/sha256://')
-        
+
         if [[ -z "$ACTUAL_SHA" ]]; then
-          echo "Error: Could not extract SHA256 digest from release at ${{ inputs.vcs-url }}"
-          exit 1
+          echo "SHA256 digest not available from API. Downloading asset to compute it locally..."
+          DOWNLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[0].browser_download_url // empty')
+          if [[ -z "$DOWNLOAD_URL" ]]; then
+            echo "Error: Could not find download URL for release asset."
+            exit 1
+          fi
+          echo "Downloading: $DOWNLOAD_URL"
+          TMP_ZIP=$(mktemp)
+          curl -sL -o "$TMP_ZIP" "$DOWNLOAD_URL"
+          ACTUAL_SHA=$(sha256sum "$TMP_ZIP" | cut -d' ' -f1)
+          rm -f "$TMP_ZIP"
+          echo "Computed SHA256: $ACTUAL_SHA"
         fi
         
         if [[ -n "${{ inputs.expected-sha256 }}" ]]; then
