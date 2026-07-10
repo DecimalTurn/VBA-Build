@@ -44,8 +44,8 @@ runs:
         source-dir-values: "${{ steps.run_vba_build.outputs.access-folders }}"
         target-dir: "${{ inputs['source-dir'] }}/out"
         compile: "false"
-        vcs-url: "https://api.github.com/repos/DecimalTurn/msaccess-vcs-addin/releases/tags/v4.1.2-our-build"
-        expected-sha256: "3464a240f23172dc69240bb487e1065d06cbf99ce0f57c57e33ed32b82b92595"
+        vcs-url: "https://api.github.com/repos/DecimalTurn/msaccess-vcs-addin/releases/tags/v4.1.2-josef-rebuild"
+        expected-sha256: "d50ce08b363d924a5dd6cb2994f4024a2d65b43f449c04d2f2156e2061b0d27d"
 outputs:
   processed-folders:
     description: "Number of folders processed during the build"
