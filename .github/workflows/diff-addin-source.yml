@@ -1,0 +1,147 @@
+name: Diff Access VCS Add-in Source
+
+on:
+  workflow_dispatch:
+    inputs:
+      url1:
+        description: 'Download URL for first add-in zip'
+        required: true
+      url2:
+        description: 'Download URL for second add-in zip'
+        required: true
+      label1:
+        description: 'Label for first add-in (used in output)'
+        required: false
+        default: 'addin1'
+      label2:
+        description: 'Label for second add-in (used in output)'
+        required: false
+        default: 'addin2'
+
+jobs:
+  diff:
+    runs-on: windows-2025
+    timeout-minutes: 15
+
+    steps:
+      - name: Setup Access
+        uses: DecimalTurn/setup-vba@v0
+        with:
+          office-apps: Access
+          install-office: true
+
+      - name: Download both releases
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "${{ inputs.label1 }}", "${{ inputs.label2 }}" -Force
+
+          Invoke-WebRequest "${{ inputs.url1 }}" -OutFile addin1.zip
+          Expand-Archive addin1.zip -DestinationPath "${{ inputs.label1 }}" -Force
+
+          Invoke-WebRequest "${{ inputs.url2 }}" -OutFile addin2.zip
+          Expand-Archive addin2.zip -DestinationPath "${{ inputs.label2 }}" -Force
+          Expand-Archive ours.zip -DestinationPath our-rebuild -Force
+
+          Write-Host "Josef files:"
+          Get-ChildItem josef-original | Select-Object Name, Length
+          Write-Host "Our files:"
+          Get-ChildItem "${{ inputs.label1 }}" | Select-Object Name, Length
+          Write-Host "${{ inputs.label2 }} files:"
+          Get-ChildItem "${{ inputs.label2 }}" | Select-Object Name, Length
+
+      - name: Install VCS add-in as export tool
+        shell: pwsh
+        run: |
+          $addinFolder = "$env:APPDATA\MSAccessVCS"
+          New-Item -ItemType Directory -Path $addinFolder -Force
+          Copy-Item "${{ inputs.label1 }}\Version Control.accda" "$addinFolder\Version Control.accda" -Force
+
+          Write-Host "Add-in installed to $addinFolder"
+
+      - name: Export source from both add-ins
+        shell: pwsh
+        run: |
+          $addinPath = "$env:APPDATA\MSAccessVCS\Version Control"
+
+          @(
+            @{Name="${{ inputs.label1 }}"; Path="${{ inputs.label1 }}\Version Control.accda"; OutDir="${{ inputs.label1 }}-source"},
+            @{Name="${{ inputs.label2 }}"; Path="${{ inputs.label2 }}\Version Control.accda"; OutDir="${{ inputs.label2 }}-source"}
+          ) | ForEach-Object {
+            New-Item -ItemType Directory -Path $_.OutDir -Force
+
+            Write-Host "=== Exporting $($_.Name) add-in source ==="
+            $access = New-Object -ComObject Access.Application
+            $access.Visible = $false
+            $access.AutomationSecurity = 1
+
+            $fullPath = Resolve-Path $_.Path
+            $outPath = Resolve-Path $_.OutDir
+
+            Write-Host "Opening: $fullPath"
+            $access.OpenCurrentDatabase($fullPath)
+
+            Write-Host "Running export..."
+            try {
+              $access.Run("$addinPath.SetInteractionMode", [ref] 1)
+              $access.Run("$addinPath.HandleRibbonCommand", [ref] "btnExport", [ref] "$outPath")
+              Start-Sleep -Seconds 10
+            } catch {
+              Write-Host "Export command error: $_"
+            }
+
+            $access.Quit()
+            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($access) | Out-Null
+            [GC]::Collect()
+            Start-Sleep -Seconds 5
+            Write-Host "Exported $($_.Name) to $($_.OutDir)"
+          }
+
+      - name: Compare source trees
+        shell: pwsh
+        run: |
+          $dir1 = "${{ inputs.label1 }}-source"
+          $dir2 = "${{ inputs.label2 }}-source"
+
+          Write-Host "=== File count ==="
+          Write-Host "${{ inputs.label1 }}: $((Get-ChildItem $dir1 -Recurse -File).Count) files"
+          Write-Host "${{ inputs.label2 }}:  $((Get-ChildItem $dir2 -Recurse -File).Count) files"
+
+          Write-Host ""
+          Write-Host "=== Files only in ${{ inputs.label1 }} ==="
+          $files1 = Get-ChildItem $dir1 -Recurse -File | ForEach-Object { $_.FullName.Replace((Resolve-Path $dir1).Path + '\', '') }
+          $files2 = Get-ChildItem $dir2 -Recurse -File | ForEach-Object { $_.FullName.Replace((Resolve-Path $dir2).Path + '\', '') }
+          Compare-Object $files1 $files2 | Where-Object SideIndicator -eq '<=' | ForEach-Object { Write-Host "  $($_.InputObject)" }
+
+          Write-Host ""
+          Write-Host "=== Files only in ${{ inputs.label2 }} ==="
+          Compare-Object $files1 $files2 | Where-Object SideIndicator -eq '=>' | ForEach-Object { Write-Host "  $($_.InputObject)" }
+
+          Write-Host ""
+          Write-Host "=== Files with content differences ==="
+          $common = Compare-Object $files1 $files2 -IncludeEqual -ExcludeDifferent | ForEach-Object InputObject
+          foreach ($file in $common) {
+            $p1 = Join-Path $dir1 $file
+            $p2 = Join-Path $dir2 $file
+            if ((Get-FileHash $p1 -Algorithm SHA256).Hash -ne (Get-FileHash $p2 -Algorithm SHA256).Hash) {
+              Write-Host "  DIFF: $file"
+            }
+          }
+
+      - name: Show sample diff
+        shell: pwsh
+        run: |
+          $dir1 = "${{ inputs.label1 }}-source"
+          $dir2 = "${{ inputs.label2 }}-source"
+          Write-Host "=== Sample: vcs-options.json ==="
+          if ((Test-Path "$dir1\vcs-options.json") -and (Test-Path "$dir2\vcs-options.json")) {
+            $j = Get-Content "$dir1\vcs-options.json" -Raw
+            $o = Get-Content "$dir2\vcs-options.json" -Raw
+            if ($j -ne $o) {
+              Write-Host "${{ inputs.label1 }} vcs-options:"
+              Write-Host $j
+              Write-Host "${{ inputs.label2 }} vcs-options:"
+              Write-Host $o
+            } else {
+              Write-Host "vcs-options.json is identical"
+            }
+          }
