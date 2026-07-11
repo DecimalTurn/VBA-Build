@@ -46,53 +46,66 @@ jobs:
           Write-Host "${{ inputs.label2 }} files:"
           Get-ChildItem "${{ inputs.label2 }}" | Select-Object Name, Length
 
-      - name: Compare database objects via COM
+      - name: Install VCS add-in as export tool
         shell: pwsh
         run: |
-          function Export-VBAComponents($accdbPath, $outDir) {
-            New-Item -ItemType Directory -Path $outDir -Force
+          $addinFolder = "$env:APPDATA\MSAccessVCS"
+          New-Item -ItemType Directory -Path $addinFolder -Force
+          Copy-Item "${{ inputs.label1 }}\Version Control.accda" "$addinFolder\Version Control.accda" -Force
+          Write-Host "Add-in installed to $addinFolder"
+
+      - name: Export VBA source using VCS add-in
+        shell: pwsh
+        run: |
+          $addinPath = "$env:APPDATA\MSAccessVCS\Version Control"
+
+          @(
+            @{Label="${{ inputs.label1 }}"; Path="${{ inputs.label1 }}\Version Control.accda"; OutDir="${{ inputs.label1 }}-source"},
+            @{Label="${{ inputs.label2 }}"; Path="${{ inputs.label2 }}\Version Control.accda"; OutDir="${{ inputs.label2 }}-source"}
+          ) | ForEach-Object {
+            New-Item -ItemType Directory -Path $_.OutDir -Force
+            $fullPath = Resolve-Path $_.Path
+            $expectedExport = Join-Path (Split-Path $fullPath) "Version Control.accda.src"
+
+            Write-Host "=== Exporting $($_.Label) ==="
             $access = New-Object -ComObject Access.Application
             $access.Visible = $false
             $access.AutomationSecurity = 1
-            $access.OpenCurrentDatabase((Resolve-Path $accdbPath))
+            $access.OpenCurrentDatabase($fullPath)
 
-            $vbe = $access.VBE
-            $proj = $vbe.ActiveVBProject
-            Write-Host "VBA Components: $($proj.VBComponents.Count)"
-            foreach ($comp in $proj.VBComponents) {
-              $name = "$($comp.Name)$(switch($comp.Type){1{'.bas'}2{'.cls'}3{'.frm'}100{'.cls'}})"
-              $path = Join-Path $outDir $name
-              try {
-                $comp.Export($path)
-              } catch {
-                Write-Host "  Failed to export: $name"
-              }
+            Write-Host "Calling ExportSource..."
+            try {
+              $access.Run("$addinPath.SetInteractionMode", [ref] 1)
+              $access.Run("$addinPath.ExportSource", [ref] $true)
+              Start-Sleep -Seconds 60
+            } catch {
+              Write-Host "Export error: $_"
             }
+
+            if (Test-Path $expectedExport) {
+              Copy-Item "$expectedExport\*" $_.OutDir -Recurse -Force
+              Write-Host "Copied $((Get-ChildItem $_.OutDir -Recurse -File).Count) files from $expectedExport"
+            } else {
+              Write-Host "Export not found at $expectedExport"
+            }
+
             $access.Quit()
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($access) | Out-Null
             [GC]::Collect()
-            Start-Sleep -Seconds 3
+            Start-Sleep -Seconds 5
           }
 
-          Export-VBAComponents "${{ inputs.label1 }}\Version Control.accda" "${{ inputs.label1 }}-vba"
-          Export-VBAComponents "${{ inputs.label2 }}\Version Control.accda" "${{ inputs.label2 }}-vba"
-
-          Write-Host "=== VBA file counts ==="
-          Write-Host "${{ inputs.label1 }}: $((Get-ChildItem '${{ inputs.label1 }}-vba' -File).Count) files"
-          Write-Host "${{ inputs.label2 }}: $((Get-ChildItem '${{ inputs.label2 }}-vba' -File).Count) files"
-
-      - name: Git diff of VBA source
+      - name: Git diff of exported source
         shell: bash
         run: |
-          cd "${{ inputs.label1 }}-vba"
+          cd "${{ inputs.label1 }}-source"
           git init
           git config user.name "diff-bot"
           git config user.email "diff@bot"
           git add -A
           git commit -m "${{ inputs.label1 }}"
 
-          # Overlay the second add-in's VBA source
-          cp -r "../${{ inputs.label2 }}-vba/"* . 2>/dev/null || true
+          cp -r "../${{ inputs.label2 }}-source/"* . 2>/dev/null || true
 
           echo "=== Files that differ ==="
           git diff --stat
