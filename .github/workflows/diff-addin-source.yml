@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Setup Access
-        uses: DecimalTurn/setup-vba@v0
+        uses: DecimalTurn/setup-vba@797e4a232699a98507cb4411d5bea3697427ad57 # v0.3.0
         with:
           office-apps: Access
           install-office: true
