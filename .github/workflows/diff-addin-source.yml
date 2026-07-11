@@ -46,107 +46,66 @@ jobs:
           Write-Host "${{ inputs.label2 }} files:"
           Get-ChildItem "${{ inputs.label2 }}" | Select-Object Name, Length
 
-      - name: Install VCS add-in as export tool
+      - name: Compare database objects via COM
         shell: pwsh
         run: |
-          $addinFolder = "$env:APPDATA\MSAccessVCS"
-          New-Item -ItemType Directory -Path $addinFolder -Force
-          Copy-Item "${{ inputs.label1 }}\Version Control.accda" "$addinFolder\Version Control.accda" -Force
-
-          Write-Host "Add-in installed to $addinFolder"
-
-      - name: Export source from both add-ins
-        shell: pwsh
-        run: |
-          $addinPath = "$env:APPDATA\MSAccessVCS\Version Control"
-
-          @(
-            @{Name="${{ inputs.label1 }}"; Path="${{ inputs.label1 }}\Version Control.accda"; OutDir="${{ inputs.label1 }}-source"},
-            @{Name="${{ inputs.label2 }}"; Path="${{ inputs.label2 }}\Version Control.accda"; OutDir="${{ inputs.label2 }}-source"}
-          ) | ForEach-Object {
-            New-Item -ItemType Directory -Path $_.OutDir -Force
-
-            Write-Host "=== Exporting $($_.Name) add-in source ==="
+          function Get-DbObjectInfo($accdbPath, $label) {
+            Write-Host "=== $label ==="
             $access = New-Object -ComObject Access.Application
             $access.Visible = $false
             $access.AutomationSecurity = 1
+            $access.OpenCurrentDatabase((Resolve-Path $accdbPath))
 
-            $fullPath = Resolve-Path $_.Path
+            Write-Host "  Modules:     $($access.Modules.Count)"
+            Write-Host "  Forms:       $($access.Forms.Count)"
+            Write-Host "  Reports:     $($access.Reports.Count)"
+            Write-Host "  Macros:      $($access.CurrentProject.AllMacros.Count)"
+            Write-Host "  References:  $($access.References.Count)"
+            Write-Host "  DB size:     $((Get-Item $accdbPath).Length) bytes"
 
-            Write-Host "Opening: $fullPath"
-            $access.OpenCurrentDatabase($fullPath)
-
-            Write-Host "Running export..."
-            try {
-              $access.Run("$addinPath.SetInteractionMode", [ref] 1)
-              $access.Run("$addinPath.HandleRibbonCommand", [ref] "btnExport")
-              Start-Sleep -Seconds 30
-            } catch {
-              Write-Host "Export command error: $_"
+            # List all module names
+            Write-Host "  Module names:"
+            foreach ($mod in $access.Modules) {
+              Write-Host "    $($mod.Name)"
             }
 
-            # Copy exported files from the addin's default export location
-            $exportedFrom = Split-Path $fullPath
-            $sourceDir = Join-Path $exportedFrom "Version Control.accda.src"
-            if (Test-Path $sourceDir) {
-              Copy-Item "$sourceDir\*" $_.OutDir -Recurse -Force
-              Write-Host "Copied from $sourceDir to $($_.OutDir)"
-            } else {
-              Write-Host "WARNING: Export source not found at $sourceDir"
+            # List all form names
+            Write-Host "  Form names:"
+            foreach ($frm in $access.Forms) {
+              Write-Host "    $($frm.Name)"
+            }
+
+            # Check if VBA project is compiled
+            try {
+              $vbe = $access.VBE
+              Write-Host "  VBA project compiled: $(-not $vbe.ActiveVBProject.Collection.Count)"
+            } catch {
+              Write-Host "  VBA project: could not access"
             }
 
             $access.Quit()
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($access) | Out-Null
             [GC]::Collect()
-            Start-Sleep -Seconds 5
+            Start-Sleep -Seconds 3
           }
 
-      - name: Compare source trees
+          Get-DbObjectInfo "${{ inputs.label1 }}\Version Control.accda" "${{ inputs.label1 }}"
+          Get-DbObjectInfo "${{ inputs.label2 }}\Version Control.accda" "${{ inputs.label2 }}"
+
+      - name: Binary comparison
         shell: pwsh
         run: |
-          $dir1 = "${{ inputs.label1 }}-source"
-          $dir2 = "${{ inputs.label2 }}-source"
+          $f1 = "${{ inputs.label1 }}\Version Control.accda"
+          $f2 = "${{ inputs.label2 }}\Version Control.accda"
 
-          Write-Host "=== File count ==="
-          Write-Host "${{ inputs.label1 }}: $((Get-ChildItem $dir1 -Recurse -File).Count) files"
-          Write-Host "${{ inputs.label2 }}:  $((Get-ChildItem $dir2 -Recurse -File).Count) files"
+          Write-Host "=== Binary comparison ==="
+          $hash1 = (Get-FileHash $f1 -Algorithm SHA256).Hash
+          $hash2 = (Get-FileHash $f2 -Algorithm SHA256).Hash
+          Write-Host "${{ inputs.label1 }} SHA256: $hash1"
+          Write-Host "${{ inputs.label2 }} SHA256: $hash2"
 
-          Write-Host ""
-          Write-Host "=== Files only in ${{ inputs.label1 }} ==="
-          $files1 = Get-ChildItem $dir1 -Recurse -File | ForEach-Object { $_.FullName.Replace((Resolve-Path $dir1).Path + '\', '') }
-          $files2 = Get-ChildItem $dir2 -Recurse -File | ForEach-Object { $_.FullName.Replace((Resolve-Path $dir2).Path + '\', '') }
-          Compare-Object $files1 $files2 | Where-Object SideIndicator -eq '<=' | ForEach-Object { Write-Host "  $($_.InputObject)" }
-
-          Write-Host ""
-          Write-Host "=== Files only in ${{ inputs.label2 }} ==="
-          Compare-Object $files1 $files2 | Where-Object SideIndicator -eq '=>' | ForEach-Object { Write-Host "  $($_.InputObject)" }
-
-          Write-Host ""
-          Write-Host "=== Files with content differences ==="
-          $common = Compare-Object $files1 $files2 -IncludeEqual -ExcludeDifferent | ForEach-Object InputObject
-          foreach ($file in $common) {
-            $p1 = Join-Path $dir1 $file
-            $p2 = Join-Path $dir2 $file
-            if ((Get-FileHash $p1 -Algorithm SHA256).Hash -ne (Get-FileHash $p2 -Algorithm SHA256).Hash) {
-              Write-Host "  DIFF: $file"
-            }
-          }
-
-      - name: Show sample diff
-        shell: pwsh
-        run: |
-          $dir1 = "${{ inputs.label1 }}-source"
-          $dir2 = "${{ inputs.label2 }}-source"
-          Write-Host "=== Sample: vcs-options.json ==="
-          if ((Test-Path "$dir1\vcs-options.json") -and (Test-Path "$dir2\vcs-options.json")) {
-            $j = Get-Content "$dir1\vcs-options.json" -Raw
-            $o = Get-Content "$dir2\vcs-options.json" -Raw
-            if ($j -ne $o) {
-              Write-Host "${{ inputs.label1 }} vcs-options:"
-              Write-Host $j
-              Write-Host "${{ inputs.label2 }} vcs-options:"
-              Write-Host $o
-            } else {
-              Write-Host "vcs-options.json is identical"
-            }
+          if ($hash1 -eq $hash2) {
+            Write-Host "Files are byte-identical"
+          } else {
+            Write-Host "Files differ ($((Get-Item $f1).Length) vs $((Get-Item $f2).Length) bytes)"
           }
