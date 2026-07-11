@@ -16,7 +16,7 @@ inputs:
   vcs-url:
     description: 'VCS URL for the Access database add-in'
     required: false
-    default: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-jp.3"
+    default: "https://api.github.com/repos/DecimalTurn/msaccess-vcs-addin/releases/tags/v4.1.2-jp2-rebuild"
   expected-sha256:
     description: 'Expected SHA256 digest of the VCS asset (optional - if not provided, will be fetched from release)'
     required: false
