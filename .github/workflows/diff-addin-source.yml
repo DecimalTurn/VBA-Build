@@ -72,7 +72,6 @@ jobs:
             $access.AutomationSecurity = 1
 
             $fullPath = Resolve-Path $_.Path
-            $outPath = Resolve-Path $_.OutDir
 
             Write-Host "Opening: $fullPath"
             $access.OpenCurrentDatabase($fullPath)
@@ -80,17 +79,26 @@ jobs:
             Write-Host "Running export..."
             try {
               $access.Run("$addinPath.SetInteractionMode", [ref] 1)
-              $access.Run("$addinPath.HandleRibbonCommand", [ref] "btnExport", [ref] "$outPath")
-              Start-Sleep -Seconds 10
+              $access.Run("$addinPath.HandleRibbonCommand", [ref] "btnExport")
+              Start-Sleep -Seconds 30
             } catch {
               Write-Host "Export command error: $_"
+            }
+
+            # Copy exported files from the addin's default export location
+            $exportedFrom = Split-Path $fullPath
+            $sourceDir = Join-Path $exportedFrom "Version Control.accda.src"
+            if (Test-Path $sourceDir) {
+              Copy-Item "$sourceDir\*" $_.OutDir -Recurse -Force
+              Write-Host "Copied from $sourceDir to $($_.OutDir)"
+            } else {
+              Write-Host "WARNING: Export source not found at $sourceDir"
             }
 
             $access.Quit()
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($access) | Out-Null
             [GC]::Collect()
             Start-Sleep -Seconds 5
-            Write-Host "Exported $($_.Name) to $($_.OutDir)"
           }
 
       - name: Compare source trees
