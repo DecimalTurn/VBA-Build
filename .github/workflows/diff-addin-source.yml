@@ -49,63 +49,55 @@ jobs:
       - name: Compare database objects via COM
         shell: pwsh
         run: |
-          function Get-DbObjectInfo($accdbPath, $label) {
-            Write-Host "=== $label ==="
+          function Export-VBAComponents($accdbPath, $outDir) {
+            New-Item -ItemType Directory -Path $outDir -Force
             $access = New-Object -ComObject Access.Application
             $access.Visible = $false
             $access.AutomationSecurity = 1
             $access.OpenCurrentDatabase((Resolve-Path $accdbPath))
 
-            Write-Host "  Modules:     $($access.Modules.Count)"
-            Write-Host "  Forms:       $($access.Forms.Count)"
-            Write-Host "  Reports:     $($access.Reports.Count)"
-            Write-Host "  Macros:      $($access.CurrentProject.AllMacros.Count)"
-            Write-Host "  References:  $($access.References.Count)"
-            Write-Host "  DB size:     $((Get-Item $accdbPath).Length) bytes"
-
-            # List all module names
-            Write-Host "  Module names:"
-            foreach ($mod in $access.Modules) {
-              Write-Host "    $($mod.Name)"
+            $vbe = $access.VBE
+            $proj = $vbe.ActiveVBProject
+            Write-Host "VBA Components: $($proj.VBComponents.Count)"
+            foreach ($comp in $proj.VBComponents) {
+              $name = "$($comp.Name)$(switch($comp.Type){1{'.bas'}2{'.cls'}3{'.frm'}100{'.cls'}})"
+              $path = Join-Path $outDir $name
+              try {
+                $comp.Export($path)
+              } catch {
+                Write-Host "  Failed to export: $name"
+              }
             }
-
-            # List all form names
-            Write-Host "  Form names:"
-            foreach ($frm in $access.Forms) {
-              Write-Host "    $($frm.Name)"
-            }
-
-            # Check if VBA project is compiled
-            try {
-              $vbe = $access.VBE
-              Write-Host "  VBA project compiled: $(-not $vbe.ActiveVBProject.Collection.Count)"
-            } catch {
-              Write-Host "  VBA project: could not access"
-            }
-
             $access.Quit()
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($access) | Out-Null
             [GC]::Collect()
             Start-Sleep -Seconds 3
           }
 
-          Get-DbObjectInfo "${{ inputs.label1 }}\Version Control.accda" "${{ inputs.label1 }}"
-          Get-DbObjectInfo "${{ inputs.label2 }}\Version Control.accda" "${{ inputs.label2 }}"
+          Export-VBAComponents "${{ inputs.label1 }}\Version Control.accda" "${{ inputs.label1 }}-vba"
+          Export-VBAComponents "${{ inputs.label2 }}\Version Control.accda" "${{ inputs.label2 }}-vba"
 
-      - name: Binary comparison
-        shell: pwsh
+          Write-Host "=== VBA file counts ==="
+          Write-Host "${{ inputs.label1 }}: $((Get-ChildItem '${{ inputs.label1 }}-vba' -File).Count) files"
+          Write-Host "${{ inputs.label2 }}: $((Get-ChildItem '${{ inputs.label2 }}-vba' -File).Count) files"
+
+      - name: Git diff of VBA source
+        shell: bash
         run: |
-          $f1 = "${{ inputs.label1 }}\Version Control.accda"
-          $f2 = "${{ inputs.label2 }}\Version Control.accda"
+          cd "${{ inputs.label1 }}-vba"
+          git init
+          git config user.name "diff-bot"
+          git config user.email "diff@bot"
+          git add -A
+          git commit -m "${{ inputs.label1 }}"
 
-          Write-Host "=== Binary comparison ==="
-          $hash1 = (Get-FileHash $f1 -Algorithm SHA256).Hash
-          $hash2 = (Get-FileHash $f2 -Algorithm SHA256).Hash
-          Write-Host "${{ inputs.label1 }} SHA256: $hash1"
-          Write-Host "${{ inputs.label2 }} SHA256: $hash2"
+          # Overlay the second add-in's VBA source
+          cp -r "../${{ inputs.label2 }}-vba/"* . 2>/dev/null || true
 
-          if ($hash1 -eq $hash2) {
-            Write-Host "Files are byte-identical"
-          } else {
-            Write-Host "Files differ ($((Get-Item $f1).Length) vs $((Get-Item $f2).Length) bytes)"
+          echo "=== Files that differ ==="
+          git diff --stat
+
+          echo ""
+          echo "=== Detailed diff (first 500 lines) ==="
+          git diff | head -500
           }
