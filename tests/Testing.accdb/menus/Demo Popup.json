@@ -1,0 +1,39 @@
+﻿{
+  "Info": {
+    "Class": "clsDbCommandBar",
+    "Description": "CommandBar"
+  },
+  "Items": {
+    "AdaptiveMenu": false,
+    "Context": "",
+    "Enabled": true,
+    "NameLocal": "Demo Popup",
+    "Position": 5,
+    "Protection": 22,
+    "Type": 2,
+    "Controls": [
+      {
+        "BeginGroup": false,
+        "BuiltIn": false,
+        "BuiltInFace": false,
+        "Caption": "Custom Button",
+        "DescriptionText": "",
+        "Enabled": true,
+        "FaceId": 0,
+        "HelpContextId": 0,
+        "HelpFile": "",
+        "HyperlinkType": 0,
+        "OLEUsage": 1,
+        "OnAction": "=MenuHandler(\"Demo Popup.Custom Button\")",
+        "Parameter": "",
+        "ShortcutText": "",
+        "Style": 0,
+        "Tag": "",
+        "TooltipText": "Custom Button",
+        "Type": 1,
+        "Visible": true,
+        "ImagePath": "rel:Demo Popup_Images\\Custom Button"
+      }
+    ]
+  }
+}

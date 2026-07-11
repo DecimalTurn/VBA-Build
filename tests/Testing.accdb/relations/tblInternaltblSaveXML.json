@@ -1,0 +1,18 @@
+﻿{
+  "Info": {
+    "Class": "clsDbRelation",
+    "Description": "Database relationship"
+  },
+  "Items": {
+    "Name": "tblInternaltblSaveXML",
+    "Attributes": 2,
+    "Table": "tblInternal",
+    "ForeignTable": "tblSaveXML",
+    "Fields": [
+      {
+        "Name": "ObjectType",
+        "ForeignName": "ObjectType"
+      }
+    ]
+  }
+}

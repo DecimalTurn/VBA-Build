@@ -1,0 +1,28 @@
+﻿{
+  "Info": {
+    "Class": "clsDbDocument",
+    "Description": "Database Documents Properties (DAO)"
+  },
+  "Items": {
+    "Databases": {
+      "SummaryInfo": {
+        "Author": {
+          "Type": 10,
+          "Value": "Adam Waller"
+        },
+        "Hyperlink base": {
+          "Type": 10,
+          "Value": "https://github.com/joyfullservice/msaccess-vcs-integration/"
+        },
+        "Subject": {
+          "Type": 10,
+          "Value": "Test functionality of Version Control System"
+        },
+        "Title": {
+          "Type": 10,
+          "Value": "VCS Testing"
+        }
+      }
+    }
+  }
+}
