@@ -96,7 +96,7 @@ jobs:
           }
 
       - name: Git diff of exported source
-        shell: bash
+        shell: pwsh
         run: |
           cd "${{ inputs.label1 }}-source"
           git init
@@ -105,12 +105,21 @@ jobs:
           git add -A
           git commit -m "${{ inputs.label1 }}"
 
-          cp -r "../${{ inputs.label2 }}-source/"* . 2>/dev/null || true
+          # Overlay second add-in's source
+          Copy-Item "../${{ inputs.label2 }}-source/*" . -Recurse -Force -ErrorAction SilentlyContinue
 
-          echo "=== Files that differ ==="
-          git diff --stat
+          Write-Host "=== Files only in ${{ inputs.label1 }} (MISSING from ${{ inputs.label2 }}) ==="
+          git status --short | Where-Object { $_ -match '^\?\?' } | ForEach-Object { Write-Host "  $_" }
 
-          echo ""
-          echo "=== Detailed diff (first 500 lines) ==="
-          git diff | head -500
-          }
+          Write-Host ""
+          Write-Host "=== Files only in ${{ inputs.label2 }} (EXTRA in ${{ inputs.label2 }}) ==="
+          git status --short | Where-Object { $_ -match '^ D' } | ForEach-Object { Write-Host "  $_" }
+
+          Write-Host ""
+          Write-Host "=== Files that differ ==="
+          git add -A
+          git diff --stat --cached
+
+          Write-Host ""
+          Write-Host "=== Detailed diff (first 300 lines) ==="
+          git diff --cached | Select-Object -First 300
