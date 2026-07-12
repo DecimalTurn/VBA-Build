@@ -24,10 +24,10 @@ jobs:
       - name: Build Access database from source
         uses: DecimalTurn/msaccess-vcs-build@main # diagnostic fork
         with:
-          source-dir: "./tests/Minimal.accdb.src"
+          source-dir: "./tests/Testing.accdb.src"
           target-dir: "./tests/out"
           compile: "false"
-          vcs-url: "https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1"
+          vcs-url: "https://api.github.com/repos/DecimalTurn/msaccess-vcs-addin/releases/tags/v5.0.1-ci"
         timeout-minutes: 10
 
       - name: Upload screenshots
