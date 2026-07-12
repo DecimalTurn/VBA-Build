@@ -22,7 +22,7 @@ jobs:
           install-office: true
 
       - name: Build Access database from source
-        uses: DecimalTurn/msaccess-vcs-build@ee9db2d4da2099b5265214db3cad9b5334331ddf # main (diagnostic fork)
+        uses: DecimalTurn/msaccess-vcs-build@8e6ecb2e22b104aef59d5d16587ef04e3fde8071 # main (diagnostic fork)
         with:
           source-dir: "./tests/Testing.accdb"
           target-dir: "./tests/out"
