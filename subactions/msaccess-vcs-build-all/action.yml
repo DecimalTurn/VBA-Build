@@ -73,6 +73,15 @@ runs:
           echo "Current release SHA256: $ACTUAL_SHA"
         fi
 
+    - name: Register VCS add-in install path
+      shell: pwsh
+      run: |
+        $addInFolder = Join-Path $env:GITHUB_WORKSPACE "MSAccessVCS"
+        $regPath = "HKCU:\Software\VB and VBA Program Settings\MSAccessVCS\Install"
+        if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
+        Set-ItemProperty -Path $regPath -Name "Install Folder" -Value $addInFolder -Type String
+        Write-Host "Registered VCS install folder: $addInFolder"
+
     - name: Call action 0
       if: ${{ fromJSON(steps.parse.outputs.count) > 0 }}
       uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
