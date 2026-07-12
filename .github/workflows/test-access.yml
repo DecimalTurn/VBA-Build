@@ -1,0 +1,42 @@
+name: Test Access Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Access runtime
+        uses: DecimalTurn/setup-vba@797e4a232699a98507cb4411d5bea3697427ad57 # v0.3.0
+        with:
+          office-apps: Access
+          install-office: true
+
+      - name: Build Access database from source
+        uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+        with:
+          source-dir: "./tests/Testing.accdb"
+          target-dir: "./tests/out"
+          compile: "false"
+          vcs-url: "https://api.github.com/repos/DecimalTurn/msaccess-vcs-addin/releases/tags/v5.0.1-ci.2"
+        timeout-minutes: 10
+
+      - name: Verify build output
+        shell: pwsh
+        run: |
+          $out = Get-ChildItem ./tests/out -Recurse -File
+          if (-not $out) {
+            Write-Error "No build output found!"
+            exit 1
+          }
+          Write-Host "Build output:"
+          $out | ForEach-Object { Write-Host "  $($_.FullName) ($($_.Length) bytes)" }
