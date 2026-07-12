@@ -27,8 +27,8 @@ jobs:
           source-dir: "./tests/Testing.accdb"
           target-dir: "./tests/out"
           compile: "false"
-          vcs-url: "https://api.github.com/repos/DecimalTurn/msaccess-vcs-addin/releases/tags/v5.0.1-ci.3"
-        timeout-minutes: 15
+          vcs-url: "https://api.github.com/repos/DecimalTurn/msaccess-vcs-addin/releases/tags/v5.0.1-ci"
+        timeout-minutes: 10
 
       - name: Upload screenshots
         if: always()
