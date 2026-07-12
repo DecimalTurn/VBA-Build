@@ -1,0 +1,4 @@
+{
+  "Info": { "AddinVersion": "5.0.0", "AccessVersion": "16.0 64-bit" },
+  "Options": { "ExportFolder": "", "ExportFormatVersion": "5.0.0", "UseFastSave": false, "SplitLayoutFromVBA": true, "SaveQuerySQL": true, "SaveTableSQL": true, "SanitizeLevel": 2, "SanitizeColors": 1, "UseMergeBuild": false, "StripPublishOption": true, "HashAlgorithm": "SHA256", "UseShortHash": true, "UseGitIntegration": false }
+}
