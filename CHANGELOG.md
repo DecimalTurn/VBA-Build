@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Build support for Microsoft Access `.accde` (compiled) databases. Source folders whose name ends in `.accde` are detected, built from source, and compiled to an ACCDE.
+- New `app-config` input to pass an application config file (database properties, procedures to run, modules/references to remove) through to `msaccess-vcs-build` for Access builds.
+- New `vcs-url` and `vcs-sha` inputs to select the `msaccess-vcs-addin` release used for Access builds and optionally verify its asset digest.
+
+### Changed
+
+- Access builds now delegate compile and prepare steps to `msaccess-vcs-build@v1.1.0` (previously `v1.0.1`).
+
 ## [2.0.0] - 2026-02-18
 
 ## Breaking changes

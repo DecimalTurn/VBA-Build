@@ -13,12 +13,16 @@ inputs:
     description: 'Whether to compile the Access database'
     required: false
     default: "false"
+  app-config:
+    description: 'Application config file (set database properties, run procedures, remove modules/references, etc.)'
+    required: false
+    default: ""
   vcs-url:
     description: 'VCS URL for the Access database add-in'
     required: false
-    default: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
-  expected-sha256:
-    description: 'Expected SHA256 digest of the VCS asset (optional - if not provided, will be fetched from release)'
+    default: "https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1"
+  vcs-sha:
+    description: 'Expected SHA256 digest of the vcs-addin asset (optional - if not provided, verification is skipped)'
     required: false
 
 runs:
@@ -46,13 +50,13 @@ runs:
           exit 1
         fi
         
-        if [[ -n "${{ inputs.expected-sha256 }}" ]]; then
-          echo "Expected SHA256: ${{ inputs.expected-sha256 }}"
+        if [[ -n "${{ inputs.vcs-sha }}" ]]; then
+          echo "Expected SHA256: ${{ inputs.vcs-sha }}"
           echo "Actual SHA256: $ACTUAL_SHA"
           
-          if [[ "${{ inputs.expected-sha256 }}" != "$ACTUAL_SHA" ]]; then
+          if [[ "${{ inputs.vcs-sha }}" != "$ACTUAL_SHA" ]]; then
             echo "Error: SHA256 digest mismatch!"
-            echo "Expected: ${{ inputs.expected-sha256 }}"
+            echo "Expected: ${{ inputs.vcs-sha }}"
             echo "Actual: $ACTUAL_SHA"
             exit 1
           fi
@@ -65,45 +69,50 @@ runs:
 
     - name: Call action 0
       if: ${{ fromJSON(steps.parse.outputs.count) > 0 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value0 }}
         target-dir: ${{ inputs.target-dir }}
         compile: ${{ inputs.compile }}
+        app-config: ${{ inputs.app-config }}
         vcs-url: ${{ inputs.vcs-url }}
 
     - name: Call action 1
       if: ${{ fromJSON(steps.parse.outputs.count) > 1 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value1 }}
         target-dir: ${{ inputs.target-dir }}
         compile: ${{ inputs.compile }}
+        app-config: ${{ inputs.app-config }}
         vcs-url: ${{ inputs.vcs-url }}
 
     - name: Call action 2
       if: ${{ fromJSON(steps.parse.outputs.count) > 2 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value2 }}
         target-dir: ${{ inputs.target-dir }}
         compile: ${{ inputs.compile }}
+        app-config: ${{ inputs.app-config }}
         vcs-url: ${{ inputs.vcs-url }}
 
     - name: Call action 3
       if: ${{ fromJSON(steps.parse.outputs.count) > 3 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value3 }}
         target-dir: ${{ inputs.target-dir }}
         compile: ${{ inputs.compile }}
+        app-config: ${{ inputs.app-config }}
         vcs-url: ${{ inputs.vcs-url }}
 
     - name: Call action 4
       if: ${{ fromJSON(steps.parse.outputs.count) > 4 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: AccessCodeLib/msaccess-vcs-build@da38fda0d878d93cf8be66846da0084d27ea97f1 # v1.1.0
       with:
         source-dir: ${{ steps.parse.outputs.value4 }}
         target-dir: ${{ inputs.target-dir }}
         compile: ${{ inputs.compile }}
+        app-config: ${{ inputs.app-config }}
         vcs-url: ${{ inputs.vcs-url }}

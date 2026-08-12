@@ -1,0 +1,15 @@
+﻿<?xml version="1.0"?>
+<dataroot xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <USysRibbons>
+    <lngID>1</lngID>
+    <RibbonName>MainRibbon</RibbonName>
+    <RibbonXml>&lt;customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" &gt;&lt;commands&gt;&lt;command idMso="Help" enabled="false"/&gt;&lt;/commands&gt;&lt;ribbon startFromScratch="true"&gt;
+&lt;tabs&gt;&lt;tab id="T1" label="Home"&gt;
+&lt;group id="G1" label="Test"&gt;
+   &lt;button id="TestBtn1" label="Don't click here" size="large" imageMso="CreateTable" onAction="=RibbonProcTest1()" /&gt;
+   &lt;button idMso="PrintDialogAccess" size="large" label="Print Dialog" /&gt;
+   &lt;control idMso="WindowsSwitch" size="large" label="Switch Windows" /&gt;
+&lt;/group&gt;
+&lt;/tab&gt;&lt;/tabs&gt;&lt;/ribbon&gt;&lt;/customUI&gt;</RibbonXml>
+  </USysRibbons>
+</dataroot>

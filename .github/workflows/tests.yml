@@ -58,6 +58,13 @@ jobs:
           } else {
             Write-Host "ℹ️ No Access databases found in source directory."
           }
+          Write-Host "Access ACCDE folders found: ${{ steps.build_vba.outputs.access-de-folders }}"
+          Write-Host "Has Access ACCDE: ${{ steps.build_vba.outputs.has-access-de }}"
+          if ("${{ steps.build_vba.outputs.has-access-de }}" -eq "True") {
+            Write-Host "✅ Access ACCDE target(s) detected and will be compiled!"
+          } else {
+            Write-Host "ℹ️ No Access ACCDE targets found in source directory."
+          }
       - name: "Upload Build Artifact"
         uses: actions/upload-artifact@v7
         id: "upload"

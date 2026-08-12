@@ -24,6 +24,8 @@ $processedFolders = 0
 $successfulBuilds = 0
 $accessFolders = @()
 $hasAccessDatabase = $false
+$accessDeFolders = @()
+$hasAccessDe = $false
 
 function Get-OfficeApp {
     param (
@@ -118,9 +120,15 @@ foreach ($folder in $folders) {
     Write-Host "Office application: $app"
 
     if ($app -eq "Access") {
-        Write-Host "Access database detected. Adding to Access folders list..."
-        $accessFolders += "${SourceDir}/${folder}"
-        $hasAccessDatabase = $true
+        if ($fileExtension -eq "accde") {
+            Write-Host "Access ACCDE target detected. Adding to Access ACCDE folders list..."
+            $accessDeFolders += "${SourceDir}/${folder}"
+            $hasAccessDe = $true
+        } else {
+            Write-Host "Access database detected. Adding to Access folders list..."
+            $accessFolders += "${SourceDir}/${folder}"
+            $hasAccessDatabase = $true
+        }
         Write-Host "Access is not supported in the main build process. Skipping build but tracking for separate processing..."
         continue
     }
@@ -170,6 +178,8 @@ Write-Host "Setting GitHub Actions outputs..."
 "office-apps=$($officeApps -join '|||')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 "access-folders=$($accessFolders -join '|||')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 "has-access-database=$hasAccessDatabase" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"access-de-folders=$($accessDeFolders -join '|||')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+"has-access-de=$hasAccessDe" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
 Write-Host "Build process completed successfully!"
 Write-Host "Processed folders: $processedFolders"
@@ -177,3 +187,5 @@ Write-Host "Successful builds: $successfulBuilds"
 Write-Host "Office apps used: $($officeApps -join ' ||| ')"
 Write-Host "Access folders found: $($accessFolders -join ' ||| ')"
 Write-Host "Has Access database: $hasAccessDatabase"
+Write-Host "Access ACCDE folders found: $($accessDeFolders -join ' ||| ')"
+Write-Host "Has Access ACCDE: $hasAccessDe"
