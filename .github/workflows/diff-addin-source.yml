@@ -40,11 +40,8 @@ jobs:
 
           Invoke-WebRequest "${{ inputs.url2 }}" -OutFile addin2.zip
           Expand-Archive addin2.zip -DestinationPath "${{ inputs.label2 }}" -Force
-          Expand-Archive ours.zip -DestinationPath our-rebuild -Force
 
-          Write-Host "Josef files:"
-          Get-ChildItem josef-original | Select-Object Name, Length
-          Write-Host "Our files:"
+          Write-Host "${{ inputs.label1 }} files:"
           Get-ChildItem "${{ inputs.label1 }}" | Select-Object Name, Length
           Write-Host "${{ inputs.label2 }} files:"
           Get-ChildItem "${{ inputs.label2 }}" | Select-Object Name, Length
