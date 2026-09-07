@@ -38,7 +38,21 @@ runs:
       shell: bash
       run: |
         echo "Fetching release information from: ${{ inputs.vcs-url }}"
-        RELEASE_DATA=$(curl -s "${{ inputs.vcs-url }}")
+        TMP_RELEASE=$(mktemp)
+        HTTP_CODE=$(curl -sS --retry 3 --retry-all-errors -o "$TMP_RELEASE" -w '%{http_code}' \
+          -H "Accept: application/vnd.github+json" \
+          -H "User-Agent: vba-build" \
+          "${{ inputs.vcs-url }}" || true)
+        echo "HTTP status: $HTTP_CODE"
+        if [[ "$HTTP_CODE" != "200" ]] || ! jq -e . "$TMP_RELEASE" >/dev/null 2>&1; then
+          echo "Error: Failed to retrieve valid JSON from ${{ inputs.vcs-url }} (HTTP ${HTTP_CODE:-000})."
+          echo "Response preview:"
+          head -c 2000 "$TMP_RELEASE" 2>/dev/null || true
+          rm -f "$TMP_RELEASE"
+          exit 1
+        fi
+        RELEASE_DATA=$(cat "$TMP_RELEASE")
+        rm -f "$TMP_RELEASE"
         ACTUAL_SHA=$(echo "$RELEASE_DATA" | jq -r '.assets[0].digest // empty' | sed 's/sha256://')
 
         if [[ -z "$ACTUAL_SHA" ]]; then
@@ -50,7 +64,7 @@ runs:
           fi
           echo "Downloading: $DOWNLOAD_URL"
           TMP_ZIP=$(mktemp)
-          curl -sL -o "$TMP_ZIP" "$DOWNLOAD_URL"
+          curl -fsSL -o "$TMP_ZIP" "$DOWNLOAD_URL"
           ACTUAL_SHA=$(sha256sum "$TMP_ZIP" | cut -d' ' -f1)
           rm -f "$TMP_ZIP"
           echo "Computed SHA256: $ACTUAL_SHA"
