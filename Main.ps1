@@ -40,21 +40,37 @@ function Get-OfficeApp {
     }
 }
 
+function Get-OfficeAppFromFolder {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$FolderName
+    )
+
+    # msaccess-vcs stores Access databases in source folders named <Name>.<ext>.src
+    # (e.g. Minimal.accdb.src). These must be treated as Access, not as regular
+    # Office document folders, since they contain no XMLsource to zip.
+    if ($FolderName -match '(?i)\.(accdb|accda|accde)\.src$') {
+        return "Access"
+    }
+
+    $FileExtension = $FolderName.Substring($FolderName.LastIndexOf('.') + 1)
+    return Get-OfficeApp -FileExtension $FileExtension
+}
+
 if ($OfficeAppDetection -ieq "automatic") {
 
     Write-Host "Automatic detection of Office applications based on file extensions"
 
     # Create a list of Office applications that are needed based on the file extensions of the folders
     foreach ($folder in $folders) {
-        $FileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
-        $app = Get-OfficeApp -FileExtension $FileExtension
-        
+        $app = Get-OfficeAppFromFolder -FolderName $folder
+
         if ($app) {
             if ($officeApps -notcontains $app) {
                 $officeApps += $app
             }
         } else {
-            Write-Host "Unknown file extension: $FileExtension. Skipping..."
+            Write-Host "Unknown file extension: $folder. Skipping..."
             continue
         }
     }
@@ -103,7 +119,7 @@ foreach ($folder in $folders) {
     $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
 
     if ($OfficeAppDetection -ieq "automatic") {
-        $app = Get-OfficeApp -FileExtension $fileExtension
+        $app = Get-OfficeAppFromFolder -FolderName $folder
     } elseif ($officeApps.Count -eq 1) {
         # Note that when an array has only one element, PowerShell will treat it as a single value
         $app = $officeApps
