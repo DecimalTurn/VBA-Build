@@ -4,18 +4,5 @@
     "config:recommended"
   ],
   "minimumReleaseAge": "5 days",
-  "prCreation": "not-pending",
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^subactions/.*?/action\\.yml$/"
-      ],
-      "matchStrings": [
-        "uses:\\s+(?<dep>[^\\s@]+)@(?<currentValue>[^\\s]+)"
-      ],
-      "datasourceTemplate": "github-tags",
-      "depNameTemplate": "{{dep}}"
-    }
-  ]
+  "prCreation": "not-pending"
 }
