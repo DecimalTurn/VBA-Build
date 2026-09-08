@@ -1,5 +1,0 @@
-﻿CREATE TABLE [USysRibbons] (
-  [lngID] AUTOINCREMENT CONSTRAINT [lngID] PRIMARY KEY UNIQUE NOT NULL,
-  [RibbonName] VARCHAR (255),
-  [RibbonXml] LONGTEXT
-)

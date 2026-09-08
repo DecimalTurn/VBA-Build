@@ -1,66 +1,37 @@
-{
+﻿{
   "Info": {
-    "AddinVersion": "4.1.2",
+    "AddinVersion": "5.0.1",
     "AccessVersion": "16.0 64-bit"
   },
   "Options": {
     "ExportFolder": "\\tests\\AccessDatabase.accde",
-    "ShowDebug": false,
-    "UseFastSave": true,
-    "UseMergeBuild": false,
-    "UseGitIntegration": false,
-    "SavePrintVars": true,
-    "ExportPrintSettings": {
-      "Orientation": true,
-      "PaperSize": true,
-      "Duplex": false,
-      "PrintQuality": false,
-      "DisplayFrequency": false,
-      "Collate": false,
-      "Resolution": false,
-      "DisplayFlags": false,
-      "Color": false,
-      "Copies": false,
-      "ICMMethod": false,
-      "DefaultSource": false,
-      "Scale": false,
-      "ICMIntent": false,
-      "FormName": false,
-      "PaperLength": false,
-      "DitherType": false,
-      "MediaType": false,
-      "PaperWidth": false,
-      "TTOption": false
-    },
-    "SaveQuerySQL": true,
-    "FormatSQL": true,
-    "ForceImportOriginalQuerySQL": false,
-    "SaveTableSQL": true,
+    "UseFastSave": false,
     "SplitLayoutFromVBA": true,
-    "StripPublishOption": true,
-    "SanitizeColors": 1,
-    "SanitizeLevel": 2,
-    "ExtractThemeFiles": false,
-    "TablesToExportData": {
-      "USysRegInfo": {
-        "Format": "Tab Delimited"
-      },
-      "USysRibbons": {
-        "Format": "XML Format"
-      }
-    },
-    "SchemaExports": {
-    },
+    "ExportFormatVersion": "5.0.0",
     "RunBeforeExport": "",
     "RunAfterExport": "",
     "RunBeforeBuild": "",
     "RunAfterBuild": "",
     "RunBeforeMerge": "",
     "RunAfterMerge": "",
-    "ShowVCSLegacy": true,
+    "SanitizeLevel": 2,
+    "SanitizeColors": 1,
+    "SaveQuerySQL": true,
+    "FormatSQL": true,
+    "UseDeterministicQueryExport": true,
+    "SaveTableSQL": true,
+    "SavePrintVars": true,
+    "ExtractThemeFiles": false,
+    "UseEnvForConnections": 0,
+    "ForceImportOriginalQuerySQL": false,
+    "UseMergeBuild": false,
+    "ShowDebug": false,
+    "BreakOnError": true,
+    "StripPublishOption": true,
+    "PreserveRubberDuckID": false,
     "HashAlgorithm": "SHA256",
     "UseShortHash": true,
-    "BreakOnError": false,
-    "PreserveRubberDuckID": false
+    "UseGitIntegration": false,
+    "ShowVCSLegacy": true
   }
 }

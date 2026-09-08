@@ -1,0 +1,11 @@
+﻿{
+  "Info": {
+    "Class": "clsDbSavedSpec",
+    "Description": "Saved Import/Export Specification"
+  },
+  "Items": {
+    "Name": "Export-MSysIMEXColumns",
+    "Description": "Test table export.",
+    "XML": "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\r\n<ImportExportSpecification Path = \"C:\\Users\\Adam Waller\\Documents\\MSysIMEXColumns.txt\" xmlns=\"urn:www.microsoft.com/office/access/imexspec\">\r\n\t<ExportTextPresentation  AccessObject=\"MSysIMEXColumns\" ObjectType=\"Table\" AutoStart=\"true\" Encoding=\"WindowsDefault\" />\r\n</ImportExportSpecification>"
+  }
+}
