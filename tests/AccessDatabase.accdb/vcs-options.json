@@ -4,7 +4,7 @@
     "AccessVersion": "16.0 64-bit"
   },
   "Options": {
-    "ExportFolder": "",
+    "ExportFolder": "\\tests\\AccessDatabase.accdb",
     "UseFastSave": false,
     "SplitLayoutFromVBA": true,
     "ExportFormatVersion": "5.0.0",
