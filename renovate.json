@@ -4,5 +4,8 @@
     "config:recommended"
   ],
   "minimumReleaseAge": "5 days",
-  "prCreation": "not-pending"
+  "prCreation": "not-pending",
+  "git-submodules": {
+    "enabled": true
+  }
 }
