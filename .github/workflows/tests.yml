@@ -16,6 +16,7 @@ on:
       - dev*
     paths-ignore:
       - '**/README.md'
+      - '**/CHANGELOG.md'
       - '.gitattributes'
       - '.devcontainer/**'
 
