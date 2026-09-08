@@ -43,13 +43,22 @@ function Get-OfficeApp {
 function Get-OfficeAppFromFolder {
     param (
         [Parameter(Mandatory=$true)]
-        [string]$FolderName
+        [string]$FolderName,
+        [string]$FolderPath = ""
     )
 
-    # msaccess-vcs stores Access databases in source folders named <Name>.<ext>.src
-    # (e.g. Testing.accdb.src). These must be treated as Access, not as regular
-    # Office document folders, since they contain no XMLsource to zip.
-    if ($FolderName -match '(?i)\.(accdb|accda|accde)\.src$') {
+    # An Access source is any msaccess-vcs export. msaccess-vcs writes a
+    # vcs-options.json marker at the export root regardless of the folder naming
+    # convention used (<Name>.accdb, <Name>.accdb.src, or a custom ExportFolder), so
+    # detect it by content rather than relying on the folder name.
+    if ($FolderPath -ne "" -and (Test-Path -LiteralPath (Join-Path $FolderPath 'vcs-options.json'))) {
+        return "Access"
+    }
+
+    # msaccess-vcs commonly names source folders <Name>.<ext>[.src].
+    # <Name>.<ext>.src folders must be treated as Access, not as regular Office
+    # document folders, since they contain no XMLsource to zip.
+    if ($FolderName -match '(?i)\.(accdb|accda|accde)(\.src)?$') {
         return "Access"
     }
 
@@ -61,9 +70,9 @@ if ($OfficeAppDetection -ieq "automatic") {
 
     Write-Host "Automatic detection of Office applications based on file extensions"
 
-    # Create a list of Office applications that are needed based on the file extensions of the folders
+    # Create a list of Office applications that are needed based on the source folders
     foreach ($folder in $folders) {
-        $app = Get-OfficeAppFromFolder -FolderName $folder
+        $app = Get-OfficeAppFromFolder -FolderName $folder -FolderPath (Join-Path $SourceDir $folder)
 
         if ($app) {
             if ($officeApps -notcontains $app) {
@@ -119,7 +128,7 @@ foreach ($folder in $folders) {
     $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
 
     if ($OfficeAppDetection -ieq "automatic") {
-        $app = Get-OfficeAppFromFolder -FolderName $folder
+        $app = Get-OfficeAppFromFolder -FolderName $folder -FolderPath (Join-Path $SourceDir $folder)
     } elseif ($officeApps.Count -eq 1) {
         # Note that when an array has only one element, PowerShell will treat it as a single value
         $app = $officeApps
