@@ -1,0 +1,61 @@
+name: Build-self-hosted-O64-O32
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+      - bugfix/**
+    paths:
+      - 'source/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: O64
+            binfolder: bin64
+            label: "64 bit"
+          - arch: O32
+            binfolder: bin32
+            label: "32 bit"
+    runs-on:
+      - self-hosted
+      - Windows
+      - ${{ matrix.arch }}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Build Access file (accdb/accde)"
+        id: build_access_file
+        uses: AccessCodeLib/msaccess-vcs-build@main
+        with:
+          source-dir: "source"
+          target-dir: "${{ matrix.binfolder }}"
+          compile: "true"
+          app-config: "Prepare-Application-Config.json"
+          run-accunit-tests: "true"
+        timeout-minutes: 10
+      - name: "Upload Build Artifact"
+        uses: actions/upload-artifact@v4
+        id: "upload"
+        with:
+          name: "Binary files (${{ matrix.label }})"
+          path: "./${{ matrix.binfolder }}/*"
+          if-no-files-found: warn
+      - name: "Attestation"
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: "Binary files (${{ matrix.label }})"
+          subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}

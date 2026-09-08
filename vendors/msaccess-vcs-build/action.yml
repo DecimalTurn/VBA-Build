@@ -1,0 +1,55 @@
+name: "MSAccess-VCS-Build"
+description: "Build accdb/accde file from source (msaccess-vcs exports)."
+
+branding:
+  icon: 'database'
+  color: 'blue' 
+
+inputs:
+  source-dir:
+    description: 'msaccess-vcs source folder'
+    required: false
+    default: 'source'
+  target-dir:
+    description: 'target dir for binary file'
+    required: false
+    default: ''
+  compile:
+    description: 'create accde file'
+    required: false
+    default: false
+  app-config:
+    description: 'application config file (set database properties, run procedures, etc.)'
+    required: false
+    default: ''
+  run-accunit-tests:
+    description: 'run accunit tests after build'
+    required: false
+    default: false
+  vcs-url:
+    description: 'msaccess-vcs release url'
+    required: false
+    default: 'https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/latest'
+  file-name:
+    description: 'build this filename, empty = use filename from vcs options'
+    required: false
+    default: ''
+runs:
+  using: "composite"
+  steps:
+    - name: "Build accdb/accde from msaccess-vcs export"
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}\Build.ps1 `
+          -SourceDir "${{ inputs.source-dir }}" `
+          -TargetDir "${{ inputs.target-dir }}" `
+          -Compile "${{ inputs.compile }}" `
+          -AppConfigFile "${{ inputs.app-config }}" `
+          -vcsUrl "${{ inputs.vcs-url }}" `
+          -RunAccUnitTests "${{ inputs.run-accunit-tests }}" `
+          -FileName "${{ inputs.file-name }}"
+
+outputs:
+  result:
+    description: "The result of the build process."
+    value: "success"
