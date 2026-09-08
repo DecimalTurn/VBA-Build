@@ -55,13 +55,6 @@ function Get-OfficeAppFromFolder {
         return "Access"
     }
 
-    # msaccess-vcs commonly names source folders <Name>.<ext>[.src].
-    # <Name>.<ext>.src folders must be treated as Access, not as regular Office
-    # document folders, since they contain no XMLsource to zip.
-    if ($FolderName -match '(?i)\.(accdb|accda|accde)(\.src)?$') {
-        return "Access"
-    }
-
     $FileExtension = $FolderName.Substring($FolderName.LastIndexOf('.') + 1)
     return Get-OfficeApp -FileExtension $FileExtension
 }
