@@ -1,0 +1,36 @@
+name: Sync Vendored Files
+
+# Ensures the committed vendors/msaccess-vcs-build tree is kept in sync with the
+# submodules/msaccess-vcs-build submodule. Runs scripts/Bundle-Vendors.ps1 and
+# fails if it produces any change (e.g. after a submodule pointer update that was
+# committed without re-running the bundler).
+on:
+  pull_request:
+    branches:
+      - main
+      - dev*
+  push:
+    branches:
+      - main
+      - dev*
+
+jobs:
+  guard-vendors:
+    name: Check vendors/ is in sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Regenerate vendors and fail on diff
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File scripts/Bundle-Vendors.ps1
+          git diff --exit-code -- vendors/
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "vendors/ is out of sync with the submodule. Run scripts/Bundle-Vendors.ps1 and commit the result."
+            exit 1
+          }
+          Write-Host "vendors/ is in sync."
