@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 	recognized by the automatic detection. Re-export your database with `msaccess-vcs-addin` v5 so it is stored
 	as a `Name.accdb.src` folder before running `VBA-Build`.
 
+### Added
+
+- Build support for Microsoft Access `.accde` (compiled) databases: `.accde` source folders are built and compiled to an ACCDE automatically.
+- New `access-vcs-config` input to pass an application config file (database properties, procedures to run, modules/references to remove) through to `msaccess-vcs-build` for Access builds.
+- New `access-vcs-url` and `access-vcs-sha` inputs to select the `msaccess-vcs-addin` release used for Access builds and optionally verify its asset digest.
+- New `access-vcs-compile` input to force compiling all Access builds to ACCDE (empty = compile only `.accde` source folders).
+
+### Changed
+
+- Access builds now delegate compile and prepare steps to `msaccess-vcs-build@v1.1.0` (previously `v1.0.1`).
+
 ## [2.0.0] - 2026-02-18
 
 ## Breaking changes

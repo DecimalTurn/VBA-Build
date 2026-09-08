@@ -9,16 +9,20 @@ inputs:
   target-dir:
     description: 'Target directory for the build output'
     required: true
-  compile:
-    description: 'Whether to compile the Access database'
+  access-vcs-compile:
+    description: 'Force compiling all Access builds (true/false). Empty = auto-compile only folders named *.accde'
     required: false
-    default: "false"
-  vcs-url:
+    default: ""
+  access-vcs-config:
+    description: 'Application config file (set database properties, run procedures, remove modules/references, etc.)'
+    required: false
+    default: ""
+  access-vcs-url:
     description: 'VCS URL for the Access database add-in'
     required: false
     default: "https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1"
-  expected-sha256:
-    description: 'Expected SHA256 digest of the VCS asset (optional - if not provided, will be fetched from release)'
+  access-vcs-sha:
+    description: 'Expected SHA256 digest of the VCS asset (optional - if not provided, verification is skipped)'
     required: false
 
 runs:
@@ -27,9 +31,20 @@ runs:
     - id: parse
       shell: bash
       run: |
-        IFS='|||' read -ra VALS <<< "${{ inputs.source-dir-values }}"
+        RAW="${{ inputs.source-dir-values }}"
+        # IFS is a set of single chars, so it cannot split on the multi-char "|||".
+        # Replace the separator with a newline first, then read line by line.
+        RAW="${RAW//|||/$'\n'}"
+        mapfile -t VALS <<< "$RAW"
         for i in "${!VALS[@]}"; do
           echo "value$i=${VALS[$i]}" >> $GITHUB_OUTPUT
+          if [[ -n "${{ inputs.access-vcs-compile }}" ]]; then
+            echo "compile$i=${{ inputs.access-vcs-compile }}" >> $GITHUB_OUTPUT
+          elif [[ "${VALS[$i]}" =~ \.accde(\.src)?$ ]]; then
+            echo "compile$i=true" >> $GITHUB_OUTPUT
+          else
+            echo "compile$i=false" >> $GITHUB_OUTPUT
+          fi
         done
         echo "count=${#VALS[@]}" >> $GITHUB_OUTPUT
 
@@ -37,7 +52,7 @@ runs:
       name: Verify VCS release asset digest
       shell: bash
       run: |
-        echo "Fetching release information from: ${{ inputs.vcs-url }}"
+        echo "Fetching release information from: ${{ inputs.access-vcs-url }}"
         TMP_RELEASE=$(mktemp)
         AUTH_ARGS=()
         if [[ -n "${GH_TOKEN:-}" ]]; then
@@ -47,10 +62,10 @@ runs:
           -H "Accept: application/vnd.github+json" \
           -H "User-Agent: vba-build" \
           "${AUTH_ARGS[@]}" \
-          "${{ inputs.vcs-url }}" || true)
+          "${{ inputs.access-vcs-url }}" || true)
         echo "HTTP status: $HTTP_CODE"
         if [[ "$HTTP_CODE" != "200" ]] || ! jq -e . "$TMP_RELEASE" >/dev/null 2>&1; then
-          echo "Error: Failed to retrieve valid JSON from ${{ inputs.vcs-url }} (HTTP ${HTTP_CODE:-000})."
+          echo "Error: Failed to retrieve valid JSON from ${{ inputs.access-vcs-url }} (HTTP ${HTTP_CODE:-000})."
           echo "Response preview:"
           head -c 2000 "$TMP_RELEASE" 2>/dev/null || true
           rm -f "$TMP_RELEASE"
@@ -75,13 +90,13 @@ runs:
           echo "Computed SHA256: $ACTUAL_SHA"
         fi
         
-        if [[ -n "${{ inputs.expected-sha256 }}" ]]; then
-          echo "Expected SHA256: ${{ inputs.expected-sha256 }}"
+        if [[ -n "${{ inputs.access-vcs-sha }}" ]]; then
+          echo "Expected SHA256: ${{ inputs.access-vcs-sha }}"
           echo "Actual SHA256: $ACTUAL_SHA"
           
-          if [[ "${{ inputs.expected-sha256 }}" != "$ACTUAL_SHA" ]]; then
+          if [[ "${{ inputs.access-vcs-sha }}" != "$ACTUAL_SHA" ]]; then
             echo "Error: SHA256 digest mismatch!"
-            echo "Expected: ${{ inputs.expected-sha256 }}"
+            echo "Expected: ${{ inputs.access-vcs-sha }}"
             echo "Actual: $ACTUAL_SHA"
             exit 1
           fi
@@ -98,8 +113,9 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value0 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
-        vcs-url: ${{ inputs.vcs-url }}
+        compile: ${{ steps.parse.outputs.compile0 }}
+        app-config: ${{ inputs.access-vcs-config }}
+        vcs-url: ${{ inputs.access-vcs-url }}
 
     - name: Call action 1
       if: ${{ fromJSON(steps.parse.outputs.count) > 1 }}
@@ -107,8 +123,9 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value1 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
-        vcs-url: ${{ inputs.vcs-url }}
+        compile: ${{ steps.parse.outputs.compile1 }}
+        app-config: ${{ inputs.access-vcs-config }}
+        vcs-url: ${{ inputs.access-vcs-url }}
 
     - name: Call action 2
       if: ${{ fromJSON(steps.parse.outputs.count) > 2 }}
@@ -116,8 +133,9 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value2 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
-        vcs-url: ${{ inputs.vcs-url }}
+        compile: ${{ steps.parse.outputs.compile2 }}
+        app-config: ${{ inputs.access-vcs-config }}
+        vcs-url: ${{ inputs.access-vcs-url }}
 
     - name: Call action 3
       if: ${{ fromJSON(steps.parse.outputs.count) > 3 }}
@@ -125,8 +143,9 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value3 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
-        vcs-url: ${{ inputs.vcs-url }}
+        compile: ${{ steps.parse.outputs.compile3 }}
+        app-config: ${{ inputs.access-vcs-config }}
+        vcs-url: ${{ inputs.access-vcs-url }}
 
     - name: Call action 4
       if: ${{ fromJSON(steps.parse.outputs.count) > 4 }}
@@ -134,5 +153,6 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value4 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
-        vcs-url: ${{ inputs.vcs-url }}
+        compile: ${{ steps.parse.outputs.compile4 }}
+        app-config: ${{ inputs.access-vcs-config }}
+        vcs-url: ${{ inputs.access-vcs-url }}

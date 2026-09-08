@@ -21,6 +21,25 @@ inputs:
       To force a specific app instead, use the options: Excel, Word, PowerPoint or Access.
     required: false
     default: 'automatic'
+  access-vcs-config:
+    description: |
+      Application config file passed to msaccess-vcs-build for Access builds
+      (set database properties, run procedures, remove modules/references, etc.).
+      Empty = no prepare step.
+    required: false
+    default: ''
+  access-vcs-url:
+    description: 'msaccess-vcs-addin release URL used to build/compile Access databases'
+    required: false
+    default: 'https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1'
+  access-vcs-sha:
+    description: 'Expected SHA256 digest of the vcs-addin asset (optional; empty = skip verification)'
+    required: false
+    default: '9504af3dfaea2c8f072fdde8bbcd5ee2b8f03f656828348370f4f0129e642249'
+  access-vcs-compile:
+    description: 'Force compiling all Access builds to ACCDE. Empty = compile only source folders named *.accde'
+    required: false
+    default: ''
   github-token:
     description: 'GitHub token used to authenticate GitHub API requests. Defaults to the automatic GITHUB_TOKEN of the workflow.'
     required: false
@@ -56,9 +75,10 @@ runs:
       with:
         source-dir-values: "${{ steps.run_vba_build.outputs.access-folders }}"
         target-dir: "${{ inputs['source-dir'] }}/out"
-        compile: "false"
-        vcs-url: "https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1"
-        expected-sha256: "9504af3dfaea2c8f072fdde8bbcd5ee2b8f03f656828348370f4f0129e642249"
+        access-vcs-compile: "${{ inputs['access-vcs-compile'] }}"
+        access-vcs-config: "${{ inputs['access-vcs-config'] }}"
+        access-vcs-url: "${{ inputs['access-vcs-url'] }}"
+        access-vcs-sha: "${{ inputs['access-vcs-sha'] }}"
 outputs:
   processed-folders:
     description: "Number of folders processed during the build"

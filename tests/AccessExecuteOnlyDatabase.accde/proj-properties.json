@@ -1,0 +1,9 @@
+﻿{
+  "Info": {
+    "Class": "clsDbProjProperty",
+    "Description": "Project Properties (Access)"
+  },
+  "Items": {
+    "ProjectProperty": "TestValue"
+  }
+}

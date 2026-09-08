@@ -32,7 +32,7 @@ The main script is contained in `Main.ps1` and will perform the following action
 * Excel (.xlsm, .xlam, .xlsb and .xltm)
 * Word (.docm and .dotm)
 * PowerPoint (.pptm, .ppam and .potm)
-* Access[^2] (.accdb)
+* Access[^2] (.accdb and .accde)
 
 ## Why? 
 
@@ -50,7 +50,6 @@ Depending on the reaction of the community, I might add support for:
 - Allow unit tests to run on Microsoft Access files
 - More complex file structure using [vbaproject.toml](https://github.com/vbapm/core/blob/main/README.md#manifest-vbaprojecttoml) configuration file (manifest file)
 - Signature of the VBA Project (to facilitate distribution)
-- Microsoft Access .accde file format
 
 [^1]: All modern Office file formats for Word, PowerPoint and Excel are actually .zip files in disguse. Access is an exception in this case since the content of an Access Database (.accdb) is different and in order to do version control you'd have to use a tool like [msaccess-vcs-addin](https://github.com/joyfullservice/msaccess-vcs-addin). 
 [^2]: For Access, this GitHub Action makes use of msaccess-vcs-addin via [msaccess-vcs-build](https://github.com/AccessCodeLib/msaccess-vcs-build) meaning that you need to use the addin in Access to create the source material for the build.
