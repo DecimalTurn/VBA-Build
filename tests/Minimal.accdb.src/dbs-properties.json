@@ -1,4 +1,0 @@
-{
-  "Info": { "Class": "clsDbProperty", "Description": "Database Properties (DAO)" },
-  "Items": { "AccessVersion": { "Value": "16.0", "Type": 10 } }
-}

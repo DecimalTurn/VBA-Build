@@ -47,7 +47,7 @@ function Get-OfficeAppFromFolder {
     )
 
     # msaccess-vcs stores Access databases in source folders named <Name>.<ext>.src
-    # (e.g. Minimal.accdb.src). These must be treated as Access, not as regular
+    # (e.g. Testing.accdb.src). These must be treated as Access, not as regular
     # Office document folders, since they contain no XMLsource to zip.
     if ($FolderName -match '(?i)\.(accdb|accda|accde)\.src$') {
         return "Access"
