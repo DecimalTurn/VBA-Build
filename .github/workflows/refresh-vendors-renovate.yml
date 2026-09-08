@@ -8,10 +8,14 @@ name: Auto-refresh vendors on Renovate PRs
 # sync-vendors CI guard pass on the PR.
 #
 # Notes:
-# - Only runs for Renovate-authored, same-repo PRs (Renovate's default branch
-#   strategy). GITHUB_TOKEN is read-only for fork PRs, so those are skipped.
-# - Committing with GITHUB_TOKEN does not re-trigger workflow runs, so this
-#   cannot loop on its own push.
+# - Only runs for PRs authored by the hosted Renovate bot (renovate[bot]) in the
+#   same repository. GITHUB_TOKEN is read-only for fork PRs, so those are skipped.
+# - Hardened: the PR must change ONLY the submodule pointer (plus any regenerated
+#   vendors/). If it touches anything else - .gitmodules, scripts/, .github/, etc.
+#   - the job is skipped, so we never execute code modified by the PR head.
+# - Committing with GITHUB_TOKEN avoids starting a fresh privileged cycle; any
+#   resulting synchronize run is a no-op (vendors/ already in sync) and is
+#   serialized by the concurrency group below.
 # - If vendors/ is already in sync (e.g. re-run after our own push), the job
 #   commits nothing and exits cleanly.
 on:
@@ -29,9 +33,10 @@ concurrency:
 jobs:
   refresh:
     name: Refresh vendored msaccess-vcs-build
+    # Exact bot login only - no branch-name fallback, which could be spoofed by
+    # a collaborator naming a branch renovate/*.
     if: >-
-      (github.event.pull_request.user.login == 'renovate[bot]' ||
-       startsWith(github.event.pull_request.head.ref, 'renovate/')) &&
+      github.event.pull_request.user.login == 'renovate[bot]' &&
       github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
     runs-on: ubuntu-latest
     steps:
@@ -44,14 +49,30 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Skip if the submodule did not move in this PR
+      - name: Skip unless only the submodule pointer changed
+        # Diff-scope gate. Proceed only when the PR moves the submodule gitlink
+        # (plus, at most, already-regenerated vendors/). If anything else changed
+        # (.gitmodules, scripts/, .github/, ...) we skip, so the bundled
+        # scripts/Bundle-Vendors.ps1 we run is the trusted base version.
         shell: bash
         run: |
-          if ! git diff --name-only \
-            "${{ github.event.pull_request.base.sha }}" \
-            "${{ github.event.pull_request.head.sha }}" \
-            -- submodules/ .gitmodules | grep -q .; then
-            echo "No submodule or .gitmodules change in this PR; nothing to refresh."
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          GITLINK="submodules/msaccess-vcs-build"
+
+          CHANGED="$(git diff --name-only "$BASE" "$HEAD")"
+
+          # The submodule pointer must have actually moved.
+          if ! printf '%s\n' "$CHANGED" | grep -qx "$GITLINK"; then
+            echo "Submodule pointer did not move in this PR; nothing to refresh."
+            exit 0
+          fi
+
+          # Nothing beyond the gitlink and vendors/ may change.
+          DISALLOWED="$(printf '%s\n' "$CHANGED" | grep -vx "$GITLINK" | grep -v '^vendors/' || true)"
+          if [ -n "$DISALLOWED" ]; then
+            echo "PR changes files beyond the submodule pointer and vendors/; skipping auto-refresh for safety."
+            printf '%s\n' "$DISALLOWED"
             exit 0
           fi
 
