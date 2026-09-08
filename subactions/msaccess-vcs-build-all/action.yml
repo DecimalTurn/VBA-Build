@@ -31,7 +31,11 @@ runs:
     - id: parse
       shell: bash
       run: |
-        IFS='|||' read -ra VALS <<< "${{ inputs.source-dir-values }}"
+        RAW="${{ inputs.source-dir-values }}"
+        # IFS is a set of single chars, so it cannot split on the multi-char "|||".
+        # Replace the separator with a newline first, then read line by line.
+        RAW="${RAW//|||/$'\n'}"
+        mapfile -t VALS <<< "$RAW"
         for i in "${!VALS[@]}"; do
           echo "value$i=${VALS[$i]}" >> $GITHUB_OUTPUT
           if [[ -n "${{ inputs.access-vcs-compile }}" ]]; then
