@@ -21,6 +21,10 @@ inputs:
       To force a specific app instead, use the options: Excel, Word, PowerPoint or Access.
     required: false
     default: 'automatic'
+  github-token:
+    description: 'GitHub token used to authenticate GitHub API requests. Defaults to the automatic GITHUB_TOKEN of the workflow.'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -28,6 +32,15 @@ runs:
     - name: "Install 7-zip"
       shell: pwsh
       run: choco install 7zip.install
+    - name: "Expose GitHub token to environment"
+      shell: bash
+      env:
+        TOKEN: ${{ inputs['github-token'] || github.token }}
+      run: |
+        if [ -n "$TOKEN" ]; then
+          echo "GH_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "GITHUB_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+        fi
     - name: "Run VBA Build"
       id: "run_vba_build"
       shell: pwsh

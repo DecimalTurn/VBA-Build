@@ -39,9 +39,14 @@ runs:
       run: |
         echo "Fetching release information from: ${{ inputs.vcs-url }}"
         TMP_RELEASE=$(mktemp)
+        AUTH_ARGS=()
+        if [[ -n "${GH_TOKEN:-}" ]]; then
+          AUTH_ARGS=(-H "Authorization: Bearer ${GH_TOKEN}")
+        fi
         HTTP_CODE=$(curl -sS --retry 3 --retry-all-errors -o "$TMP_RELEASE" -w '%{http_code}' \
           -H "Accept: application/vnd.github+json" \
           -H "User-Agent: vba-build" \
+          "${AUTH_ARGS[@]}" \
           "${{ inputs.vcs-url }}" || true)
         echo "HTTP status: $HTTP_CODE"
         if [[ "$HTTP_CODE" != "200" ]] || ! jq -e . "$TMP_RELEASE" >/dev/null 2>&1; then
