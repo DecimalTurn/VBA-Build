@@ -263,7 +263,7 @@ foreach ($folder in $folders) {
         Write-Host "Access database detected. Adding to Access folders list..."
         $accessFolders += "${SourceDir}/${folder}"
         $hasAccessDatabase = $true
-        Write-Host "Access is not supported in the main build process. Skipping build but tracking for separate processing..."
+        Write-Host "Deferring Access build until after the main loop (via the vendored msaccess-vcs-build)."
         continue
     }
 
