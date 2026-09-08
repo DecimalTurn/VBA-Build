@@ -9,10 +9,10 @@ inputs:
   target-dir:
     description: 'Target directory for the build output'
     required: true
-  compile:
-    description: 'Whether to compile the Access database'
+  access-vcs-compile:
+    description: 'Force compiling all Access builds (true/false). Empty = auto-compile only folders named *.accde'
     required: false
-    default: "false"
+    default: ""
   access-vcs-config:
     description: 'Application config file (set database properties, run procedures, remove modules/references, etc.)'
     required: false
@@ -34,6 +34,13 @@ runs:
         IFS='|||' read -ra VALS <<< "${{ inputs.source-dir-values }}"
         for i in "${!VALS[@]}"; do
           echo "value$i=${VALS[$i]}" >> $GITHUB_OUTPUT
+          if [[ -n "${{ inputs.access-vcs-compile }}" ]]; then
+            echo "compile$i=${{ inputs.access-vcs-compile }}" >> $GITHUB_OUTPUT
+          elif [[ "${VALS[$i]}" =~ \.accde(\.src)?$ ]]; then
+            echo "compile$i=true" >> $GITHUB_OUTPUT
+          else
+            echo "compile$i=false" >> $GITHUB_OUTPUT
+          fi
         done
         echo "count=${#VALS[@]}" >> $GITHUB_OUTPUT
 
@@ -102,7 +109,7 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value0 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
+        compile: ${{ steps.parse.outputs.compile0 }}
         app-config: ${{ inputs.access-vcs-config }}
         vcs-url: ${{ inputs.access-vcs-url }}
 
@@ -112,7 +119,7 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value1 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
+        compile: ${{ steps.parse.outputs.compile1 }}
         app-config: ${{ inputs.access-vcs-config }}
         vcs-url: ${{ inputs.access-vcs-url }}
 
@@ -122,7 +129,7 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value2 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
+        compile: ${{ steps.parse.outputs.compile2 }}
         app-config: ${{ inputs.access-vcs-config }}
         vcs-url: ${{ inputs.access-vcs-url }}
 
@@ -132,7 +139,7 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value3 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
+        compile: ${{ steps.parse.outputs.compile3 }}
         app-config: ${{ inputs.access-vcs-config }}
         vcs-url: ${{ inputs.access-vcs-url }}
 
@@ -142,6 +149,6 @@ runs:
       with:
         source-dir: ${{ steps.parse.outputs.value4 }}
         target-dir: ${{ inputs.target-dir }}
-        compile: ${{ inputs.compile }}
+        compile: ${{ steps.parse.outputs.compile4 }}
         app-config: ${{ inputs.access-vcs-config }}
         vcs-url: ${{ inputs.access-vcs-url }}

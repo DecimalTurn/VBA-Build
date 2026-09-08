@@ -54,18 +54,10 @@ jobs:
           Write-Host "Successful builds: ${{ steps.build_vba.outputs.successful-builds }}"
           Write-Host "Office apps used: ${{ steps.build_vba.outputs.office-apps }}"
           Write-Host "Access folders found: ${{ steps.build_vba.outputs.access-folders }}"
-          Write-Host "Has Access database: ${{ steps.build_vba.outputs.has-access-database }}"
           if ("${{ steps.build_vba.outputs.has-access-database }}" -eq "True") {
             Write-Host "✅ Access database(s) detected and will be processed!"
           } else {
             Write-Host "ℹ️ No Access databases found in source directory."
-          }
-          Write-Host "Access ACCDE folders found: ${{ steps.build_vba.outputs.access-de-folders }}"
-          Write-Host "Has Access ACCDE: ${{ steps.build_vba.outputs.has-access-de }}"
-          if ("${{ steps.build_vba.outputs.has-access-de }}" -eq "True") {
-            Write-Host "✅ Access ACCDE target(s) detected and will be compiled!"
-          } else {
-            Write-Host "ℹ️ No Access ACCDE targets found in source directory."
           }
       - name: "Upload Build Artifact"
         uses: actions/upload-artifact@v7

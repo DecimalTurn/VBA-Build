@@ -36,6 +36,10 @@ inputs:
     description: 'Expected SHA256 digest of the vcs-addin asset (optional; empty = skip verification)'
     required: false
     default: '9504af3dfaea2c8f072fdde8bbcd5ee2b8f03f656828348370f4f0129e642249'
+  access-vcs-compile:
+    description: 'Force compiling all Access builds to ACCDE. Empty = compile only source folders named *.accde'
+    required: false
+    default: ''
   github-token:
     description: 'GitHub token used to authenticate GitHub API requests. Defaults to the automatic GITHUB_TOKEN of the workflow.'
     required: false
@@ -71,18 +75,7 @@ runs:
       with:
         source-dir-values: "${{ steps.run_vba_build.outputs.access-folders }}"
         target-dir: "${{ inputs['source-dir'] }}/out"
-        compile: "false"
-        access-vcs-config: "${{ inputs['access-vcs-config'] }}"
-        access-vcs-url: "${{ inputs['access-vcs-url'] }}"
-        access-vcs-sha: "${{ inputs['access-vcs-sha'] }}"
-    - name: "Build Access ACCDE (if detected)"
-      if: steps.run_vba_build.outputs.has-access-de == 'True'
-      id: "build_access_de"
-      uses: ./subactions/msaccess-vcs-build-all
-      with:
-        source-dir-values: "${{ steps.run_vba_build.outputs.access-de-folders }}"
-        target-dir: "${{ inputs['source-dir'] }}/out"
-        compile: "true"
+        access-vcs-compile: "${{ inputs['access-vcs-compile'] }}"
         access-vcs-config: "${{ inputs['access-vcs-config'] }}"
         access-vcs-url: "${{ inputs['access-vcs-url'] }}"
         access-vcs-sha: "${{ inputs['access-vcs-sha'] }}"
@@ -102,12 +95,6 @@ outputs:
   has-access-database:
     description: "Boolean indicating if any Access database folders were found"
     value: ${{ steps.run_vba_build.outputs.has-access-database }}
-  access-de-folders:
-    description: "Comma-separated list of Access ACCDE source folders"
-    value: ${{ steps.run_vba_build.outputs.access-de-folders }}
-  has-access-de:
-    description: "Boolean indicating if any Access ACCDE folders were found"
-    value: ${{ steps.run_vba_build.outputs.has-access-de }}
   first-access-folder:
     description: "The first Access database folder that was processed (if any)"
     value: ${{ steps.extract_access_folder.outputs.first-access-folder }}
