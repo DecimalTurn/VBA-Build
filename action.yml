@@ -21,18 +21,18 @@ inputs:
       To force a specific app instead, use the options: Excel, Word, PowerPoint or Access.
     required: false
     default: 'automatic'
-  app-config:
+  access-vcs-config:
     description: |
       Application config file passed to msaccess-vcs-build for Access builds
       (set database properties, run procedures, remove modules/references, etc.).
       Empty = no prepare step.
     required: false
     default: ''
-  vcs-url:
+  access-vcs-url:
     description: 'msaccess-vcs-addin release URL used to build/compile Access databases'
     required: false
     default: 'https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1'
-  expected-sha256:
+  access-vcs-sha:
     description: 'Expected SHA256 digest of the vcs-addin asset (optional; empty = skip verification)'
     required: false
     default: '9504af3dfaea2c8f072fdde8bbcd5ee2b8f03f656828348370f4f0129e642249'
@@ -72,9 +72,9 @@ runs:
         source-dir-values: "${{ steps.run_vba_build.outputs.access-folders }}"
         target-dir: "${{ inputs['source-dir'] }}/out"
         compile: "false"
-        app-config: "${{ inputs['app-config'] }}"
-        vcs-url: "${{ inputs['vcs-url'] }}"
-        expected-sha256: "${{ inputs['expected-sha256'] }}"
+        access-vcs-config: "${{ inputs['access-vcs-config'] }}"
+        access-vcs-url: "${{ inputs['access-vcs-url'] }}"
+        access-vcs-sha: "${{ inputs['access-vcs-sha'] }}"
     - name: "Build Access ACCDE (if detected)"
       if: steps.run_vba_build.outputs.has-access-de == 'True'
       id: "build_access_de"
@@ -83,9 +83,9 @@ runs:
         source-dir-values: "${{ steps.run_vba_build.outputs.access-de-folders }}"
         target-dir: "${{ inputs['source-dir'] }}/out"
         compile: "true"
-        app-config: "${{ inputs['app-config'] }}"
-        vcs-url: "${{ inputs['vcs-url'] }}"
-        expected-sha256: "${{ inputs['expected-sha256'] }}"
+        access-vcs-config: "${{ inputs['access-vcs-config'] }}"
+        access-vcs-url: "${{ inputs['access-vcs-url'] }}"
+        access-vcs-sha: "${{ inputs['access-vcs-sha'] }}"
 outputs:
   processed-folders:
     description: "Number of folders processed during the build"
