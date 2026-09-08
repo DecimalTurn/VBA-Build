@@ -65,20 +65,13 @@ runs:
       shell: pwsh
       run: |
         ${{ github.action_path }}\Main.ps1 `
-          -SourceDir "${{ inputs['source-dir'] }}" `
-          -TestFramework "${{ inputs['test-framework'] }}" `
-          -OfficeAppDetection "${{ inputs['office-app'] }}"
-    - name: "Build Access Database (if detected)"
-      if: steps.run_vba_build.outputs.has-access-database == 'True'
-      id: "build_access"
-      uses: ./subactions/msaccess-vcs-build-all
-      with:
-        source-dir-values: "${{ steps.run_vba_build.outputs.access-folders }}"
-        target-dir: "${{ inputs['source-dir'] }}/out"
-        access-vcs-compile: "${{ inputs['access-vcs-compile'] }}"
-        access-vcs-config: "${{ inputs['access-vcs-config'] }}"
-        access-vcs-url: "${{ inputs['access-vcs-url'] }}"
-        access-vcs-sha: "${{ inputs['access-vcs-sha'] }}"
+          -SourceDir        "${{ inputs['source-dir'] }}" `
+          -TestFramework    "${{ inputs['test-framework'] }}" `
+          -OfficeAppDetection "${{ inputs['office-app'] }}" `
+          -AccessVcsUrl     "${{ inputs['access-vcs-url'] }}" `
+          -AccessVcsSha     "${{ inputs['access-vcs-sha'] }}" `
+          -AccessVcsConfig  "${{ inputs['access-vcs-config'] }}" `
+          -AccessVcsCompile "${{ inputs['access-vcs-compile'] }}"
 outputs:
   processed-folders:
     description: "Number of folders processed during the build"
@@ -95,6 +88,3 @@ outputs:
   has-access-database:
     description: "Boolean indicating if any Access database folders were found"
     value: ${{ steps.run_vba_build.outputs.has-access-database }}
-  first-access-folder:
-    description: "The first Access database folder that was processed (if any)"
-    value: ${{ steps.extract_access_folder.outputs.first-access-folder }}
