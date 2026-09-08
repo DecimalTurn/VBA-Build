@@ -1,0 +1,4 @@
+[submodule "submodules/msaccess-vcs-build"]
+	path = submodules/msaccess-vcs-build
+	url = https://github.com/DecimalTurn/msaccess-vcs-build.git
+	branch = rate-limiting

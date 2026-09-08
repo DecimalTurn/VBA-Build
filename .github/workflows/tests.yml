@@ -16,6 +16,7 @@ on:
       - dev*
     paths-ignore:
       - '**/README.md'
+      - '**/CHANGELOG.md'
       - '.gitattributes'
       - '.devcontainer/**'
 
@@ -33,10 +34,11 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v6
       - name: "Setup VBA runtime"
-        uses: DecimalTurn/setup-vba@abad6bed4025d3d709cbd9c9281f856d298bd68d # v0.1.2
+        uses: DecimalTurn/setup-vba@797e4a232699a98507cb4411d5bea3697427ad57 # v0.3.0
         with:
           office-apps: "Excel,Word,PowerPoint,Access"
           install-office: "true"
+          # office-language: "fr-fr"
       - name: "Build VBA-Enabled Documents (using own action)"
         id: build_vba
         uses: ./
@@ -128,69 +130,66 @@ jobs:
           echo "Contents of ./tests/screenshots directory:"
           ls -la ./tests/screenshots || echo "tests/screenshots directory doesn't exist"
           
-          # Set filenames based on Windows version
-          REFERENCE_IMAGE="./images/fixtures/ExitScreenshot_${WINDOWS_VERSION}.png"
+          # Build the list of acceptable reference images with a regex so that
+          # new variants (ExitScreenshot_${WINDOWS_VERSION}-alt.N.png) are
+          # detected automatically as they are added.
           TEST_IMAGE="./tests/screenshots/ExitScreenshot_${WINDOWS_VERSION}.png"
-          
-          echo "Reference image path: $REFERENCE_IMAGE"
+          mapfile -t REFERENCE_IMAGES < <(find ./images/fixtures -maxdepth 1 -type f -regextype posix-extended -regex ".*/ExitScreenshot_${WINDOWS_VERSION}(-alt\.[0-9]+)?\.png" | sort)
+
           echo "Test image path: $TEST_IMAGE"
-          
-          # Check if reference image exists
-          if [ ! -f "$REFERENCE_IMAGE" ]; then
-            echo "Reference image $REFERENCE_IMAGE not found!"
-            # Create the directory structure if it doesn't exist
-            mkdir -p ./images/fixtures
-            # Copy the screenshot as a new reference if available
-            if [ -f "$TEST_IMAGE" ]; then
-              echo "Creating reference image from current screenshot"
-              cp "$TEST_IMAGE" "$REFERENCE_IMAGE"
-              echo "Reference image created. Skip comparison for this run."
-              exit 0
-            else
-              echo "No screenshot available to create a reference image"
-              exit 1
-            fi
-          fi
-          
-          # Check if test image exists
+
           if [ ! -f "$TEST_IMAGE" ]; then
             echo "Test image $TEST_IMAGE not found!"
             exit 1
           fi
-          
-          # Compare images and get similarity score
-          echo "Comparing screenshots..."
-          SIMILARITY=$(compare -metric RMSE "$REFERENCE_IMAGE" "$TEST_IMAGE" null: 2>&1) || true
-          
-          echo "Similarity output: $SIMILARITY"
-          
-          # Extract the numeric value from the similarity output
-          # The output typically looks like: "467.579 (0.0071348)" where 0.0071348 is the normalized value
-          # We want to extract that normalized value
-          NORMALIZED_VALUE=$(echo $SIMILARITY | grep -oE '\([0-9]+(\.[0-9]+)?\)' | tr -d '()')
-          
-          if [ -z "$NORMALIZED_VALUE" ]; then
-            echo "Failed to extract normalized value from similarity output"
-            # Fall back to the first numeric value if normalized value not found
-            VALUE=$(echo $SIMILARITY | grep -oE '[0-9]+(\.[0-9]+)?' | head -1)
-            if [ -z "$VALUE" ]; then
-              echo "Failed to extract any numeric value from similarity output"
-              exit 1
-            fi
-            echo "Using first numeric value: $VALUE"
-          else
-            VALUE=$NORMALIZED_VALUE
-            echo "Using normalized value: $VALUE"
+
+          if [ ${#REFERENCE_IMAGES[@]} -eq 0 ]; then
+            echo "No reference screenshot found for $WINDOWS_VERSION. Creating one from the current screenshot and skipping comparison."
+            mkdir -p ./images/fixtures
+            cp "$TEST_IMAGE" "./images/fixtures/ExitScreenshot_${WINDOWS_VERSION}-alt.1.png"
+            echo "Created reference image: ./images/fixtures/ExitScreenshot_${WINDOWS_VERSION}-alt.1.png"
+            exit 0
           fi
-          
-          # Fail if difference is too large
+
+          echo "Reference candidates:"
+          printf '  %s\n' "${REFERENCE_IMAGES[@]}"
+
           THRESHOLD=0.035
-          echo "Difference value: $VALUE (threshold: $THRESHOLD)"
-          
-          if (( $(echo "$VALUE > $THRESHOLD" | bc -l) )); then
-            echo "Screenshots differ significantly!"
-            exit 1
+          MATCHED=""
+          for REFERENCE_IMAGE in "${REFERENCE_IMAGES[@]}"; do
+            echo "Comparing $TEST_IMAGE against $REFERENCE_IMAGE"
+            SIMILARITY=$(compare -metric RMSE "$REFERENCE_IMAGE" "$TEST_IMAGE" null: 2>&1) || true
+            echo "Similarity output: $SIMILARITY"
+
+            # Extract the normalized RMSE value, e.g. "467.579 (0.0071348)" -> 0.0071348
+            NORMALIZED_VALUE=$(echo "$SIMILARITY" | grep -oE '\([0-9]+(\.[0-9]+)?\)' | tr -d '()')
+            if [ -z "$NORMALIZED_VALUE" ]; then
+              # Fall back to the first numeric value if the normalized value is absent
+              VALUE=$(echo "$SIMILARITY" | grep -oE '[0-9]+(\.[0-9]+)?' | head -1)
+              if [ -z "$VALUE" ]; then
+                echo "Failed to extract any numeric value from similarity output for $REFERENCE_IMAGE"
+                continue
+              fi
+              echo "Using first numeric value: $VALUE"
+            else
+              VALUE=$NORMALIZED_VALUE
+              echo "Using normalized value: $VALUE"
+            fi
+
+            echo "Difference vs $REFERENCE_IMAGE: $VALUE (threshold: $THRESHOLD)"
+            if (( $(echo "$VALUE <= $THRESHOLD" | bc -l) )); then
+              echo "MATCH: $TEST_IMAGE is similar to $REFERENCE_IMAGE"
+              MATCHED="$REFERENCE_IMAGE"
+              break
+            else
+              echo "No match against $REFERENCE_IMAGE (difference: $VALUE)."
+            fi
+          done
+
+          if [ -n "$MATCHED" ]; then
+            echo "Screenshots are similar enough (matched $MATCHED)."
           else
-            echo "Screenshots are similar enough."
+            echo "Screenshots differ significantly from all reference candidates!"
+            exit 1
           fi
         shell: bash

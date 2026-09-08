@@ -4,11 +4,11 @@
     "Description": "VBE Project"
   },
   "Items": {
-    "Name": "TestApp",
-    "Description": "",
-    "FileName": "AccessDatabase.accdb",
+    "Name": "VCS Testing",
+    "Description": "For automated testing of Version Control",
+    "FileName": "Testing.accdb",
     "HelpFile": "",
-    "HelpContextId": 0,
+    "HelpContextId": 123456,
     "ConditionalCompilationArguments": "",
     "Mode": 0,
     "Protection": 0,

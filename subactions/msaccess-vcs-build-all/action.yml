@@ -16,7 +16,7 @@ inputs:
   vcs-url:
     description: 'VCS URL for the Access database add-in'
     required: false
-    default: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
+    default: "https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1"
   expected-sha256:
     description: 'Expected SHA256 digest of the VCS asset (optional - if not provided, will be fetched from release)'
     required: false
@@ -38,12 +38,41 @@ runs:
       shell: bash
       run: |
         echo "Fetching release information from: ${{ inputs.vcs-url }}"
-        RELEASE_DATA=$(curl -s "${{ inputs.vcs-url }}")
-        ACTUAL_SHA=$(echo "$RELEASE_DATA" | jq -r '.assets[0].digest // empty' | sed 's/sha256://')
-        
-        if [[ -z "$ACTUAL_SHA" ]]; then
-          echo "Error: Could not extract SHA256 digest from release at ${{ inputs.vcs-url }}"
+        TMP_RELEASE=$(mktemp)
+        AUTH_ARGS=()
+        if [[ -n "${GH_TOKEN:-}" ]]; then
+          AUTH_ARGS=(-H "Authorization: Bearer ${GH_TOKEN}")
+        fi
+        HTTP_CODE=$(curl -sS --retry 3 --retry-all-errors -o "$TMP_RELEASE" -w '%{http_code}' \
+          -H "Accept: application/vnd.github+json" \
+          -H "User-Agent: vba-build" \
+          "${AUTH_ARGS[@]}" \
+          "${{ inputs.vcs-url }}" || true)
+        echo "HTTP status: $HTTP_CODE"
+        if [[ "$HTTP_CODE" != "200" ]] || ! jq -e . "$TMP_RELEASE" >/dev/null 2>&1; then
+          echo "Error: Failed to retrieve valid JSON from ${{ inputs.vcs-url }} (HTTP ${HTTP_CODE:-000})."
+          echo "Response preview:"
+          head -c 2000 "$TMP_RELEASE" 2>/dev/null || true
+          rm -f "$TMP_RELEASE"
           exit 1
+        fi
+        RELEASE_DATA=$(cat "$TMP_RELEASE")
+        rm -f "$TMP_RELEASE"
+        ACTUAL_SHA=$(echo "$RELEASE_DATA" | jq -r '.assets[0].digest // empty' | sed 's/sha256://')
+
+        if [[ -z "$ACTUAL_SHA" ]]; then
+          echo "SHA256 digest not available from API. Downloading asset to compute it locally..."
+          DOWNLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[0].browser_download_url // empty')
+          if [[ -z "$DOWNLOAD_URL" ]]; then
+            echo "Error: Could not find download URL for release asset."
+            exit 1
+          fi
+          echo "Downloading: $DOWNLOAD_URL"
+          TMP_ZIP=$(mktemp)
+          curl -fsSL -o "$TMP_ZIP" "$DOWNLOAD_URL"
+          ACTUAL_SHA=$(sha256sum "$TMP_ZIP" | cut -d' ' -f1)
+          rm -f "$TMP_ZIP"
+          echo "Computed SHA256: $ACTUAL_SHA"
         fi
         
         if [[ -n "${{ inputs.expected-sha256 }}" ]]; then
@@ -65,7 +94,7 @@ runs:
 
     - name: Call action 0
       if: ${{ fromJSON(steps.parse.outputs.count) > 0 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: DecimalTurn/msaccess-vcs-build@685b323ffcf506c8b989ece2863e509bbf3775fa # v1.1.0-rate-limiting
       with:
         source-dir: ${{ steps.parse.outputs.value0 }}
         target-dir: ${{ inputs.target-dir }}
@@ -74,7 +103,7 @@ runs:
 
     - name: Call action 1
       if: ${{ fromJSON(steps.parse.outputs.count) > 1 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: DecimalTurn/msaccess-vcs-build@685b323ffcf506c8b989ece2863e509bbf3775fa # v1.1.0-rate-limiting
       with:
         source-dir: ${{ steps.parse.outputs.value1 }}
         target-dir: ${{ inputs.target-dir }}
@@ -83,7 +112,7 @@ runs:
 
     - name: Call action 2
       if: ${{ fromJSON(steps.parse.outputs.count) > 2 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: DecimalTurn/msaccess-vcs-build@685b323ffcf506c8b989ece2863e509bbf3775fa # v1.1.0-rate-limiting
       with:
         source-dir: ${{ steps.parse.outputs.value2 }}
         target-dir: ${{ inputs.target-dir }}
@@ -92,7 +121,7 @@ runs:
 
     - name: Call action 3
       if: ${{ fromJSON(steps.parse.outputs.count) > 3 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: DecimalTurn/msaccess-vcs-build@685b323ffcf506c8b989ece2863e509bbf3775fa # v1.1.0-rate-limiting
       with:
         source-dir: ${{ steps.parse.outputs.value3 }}
         target-dir: ${{ inputs.target-dir }}
@@ -101,7 +130,7 @@ runs:
 
     - name: Call action 4
       if: ${{ fromJSON(steps.parse.outputs.count) > 4 }}
-      uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+      uses: DecimalTurn/msaccess-vcs-build@685b323ffcf506c8b989ece2863e509bbf3775fa # v1.1.0-rate-limiting
       with:
         source-dir: ${{ steps.parse.outputs.value4 }}
         target-dir: ${{ inputs.target-dir }}

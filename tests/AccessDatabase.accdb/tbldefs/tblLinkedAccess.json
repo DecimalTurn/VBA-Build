@@ -1,0 +1,13 @@
+﻿{
+  "Info": {
+    "Class": "clsDbTableDef",
+    "Description": "Linked Table"
+  },
+  "Items": {
+    "Name": "tblLinkedAccess",
+    "Connect": ";DATABASE=rel:Testing.accdb",
+    "SourceTableName": "tblInternal",
+    "Attributes": 1073741824,
+    "PrimaryKey": "[ID], [ObjectType]"
+  }
+}
