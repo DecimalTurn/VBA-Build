@@ -42,21 +42,39 @@ function Get-OfficeApp {
     }
 }
 
+function Get-OfficeAppFromFolder {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$FolderName,
+        [string]$FolderPath = ""
+    )
+
+    # An Access source is any msaccess-vcs export. msaccess-vcs writes a
+    # vcs-options.json marker at the export root regardless of the folder naming
+    # convention used (<Name>.accdb, <Name>.accdb.src, or a custom ExportFolder), so
+    # detect it by content rather than relying on the folder name.
+    if ($FolderPath -ne "" -and (Test-Path -LiteralPath (Join-Path $FolderPath 'vcs-options.json'))) {
+        return "Access"
+    }
+
+    $FileExtension = $FolderName.Substring($FolderName.LastIndexOf('.') + 1)
+    return Get-OfficeApp -FileExtension $FileExtension
+}
+
 if ($OfficeAppDetection -ieq "automatic") {
 
     Write-Host "Automatic detection of Office applications based on file extensions"
 
-    # Create a list of Office applications that are needed based on the file extensions of the folders
+    # Create a list of Office applications that are needed based on the source folders
     foreach ($folder in $folders) {
-        $FileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
-        $app = Get-OfficeApp -FileExtension $FileExtension
-        
+        $app = Get-OfficeAppFromFolder -FolderName $folder -FolderPath (Join-Path $SourceDir $folder)
+
         if ($app) {
             if ($officeApps -notcontains $app) {
                 $officeApps += $app
             }
         } else {
-            Write-Host "Unknown file extension: $FileExtension. Skipping..."
+            Write-Host "Unknown file extension: $folder. Skipping..."
             continue
         }
     }
@@ -105,7 +123,7 @@ foreach ($folder in $folders) {
     $fileExtension = $folder.Substring($folder.LastIndexOf('.') + 1)
 
     if ($OfficeAppDetection -ieq "automatic") {
-        $app = Get-OfficeApp -FileExtension $fileExtension
+        $app = Get-OfficeAppFromFolder -FolderName $folder -FolderPath (Join-Path $SourceDir $folder)
     } elseif ($officeApps.Count -eq 1) {
         # Note that when an array has only one element, PowerShell will treat it as a single value
         $app = $officeApps

@@ -32,8 +32,12 @@ inputs:
     description: 'msaccess-vcs-addin release URL used to build/compile Access databases'
     required: false
     default: 'https://api.github.com/repos/joyfullservice/msaccess-vcs-addin/releases/tags/v5.0.1'
-  vcs-sha:
+  expected-sha256:
     description: 'Expected SHA256 digest of the vcs-addin asset (optional; empty = skip verification)'
+    required: false
+    default: '9504af3dfaea2c8f072fdde8bbcd5ee2b8f03f656828348370f4f0129e642249'
+  github-token:
+    description: 'GitHub token used to authenticate GitHub API requests. Defaults to the automatic GITHUB_TOKEN of the workflow.'
     required: false
     default: ''
 
@@ -43,6 +47,15 @@ runs:
     - name: "Install 7-zip"
       shell: pwsh
       run: choco install 7zip.install
+    - name: "Expose GitHub token to environment"
+      shell: bash
+      env:
+        TOKEN: ${{ inputs['github-token'] || github.token }}
+      run: |
+        if [ -n "$TOKEN" ]; then
+          echo "GH_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "GITHUB_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+        fi
     - name: "Run VBA Build"
       id: "run_vba_build"
       shell: pwsh
@@ -61,7 +74,7 @@ runs:
         compile: "false"
         app-config: "${{ inputs['app-config'] }}"
         vcs-url: "${{ inputs['vcs-url'] }}"
-        vcs-sha: "${{ inputs['vcs-sha'] }}"
+        expected-sha256: "${{ inputs['expected-sha256'] }}"
     - name: "Build Access ACCDE (if detected)"
       if: steps.run_vba_build.outputs.has-access-de == 'True'
       id: "build_access_de"
@@ -72,7 +85,7 @@ runs:
         compile: "true"
         app-config: "${{ inputs['app-config'] }}"
         vcs-url: "${{ inputs['vcs-url'] }}"
-        vcs-sha: "${{ inputs['vcs-sha'] }}"
+        expected-sha256: "${{ inputs['expected-sha256'] }}"
 outputs:
   processed-folders:
     description: "Number of folders processed during the build"

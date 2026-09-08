@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Breaking changes
+
+- Access database builds now uses `msaccess-vcs-addin` **v5** ([#47])
+
+	Access sources exported with earlier add-in versions (e.g. v4.x `Name.accdb` folders) are no longer
+	recognized by the automatic detection. Re-export your database with `msaccess-vcs-addin` v5 so it is stored
+	as a `Name.accdb.src` folder before running `VBA-Build`.
+
 ### Added
 
 - Build support for Microsoft Access `.accde` (compiled) databases. Source folders whose name ends in `.accde` are detected, built from source, and compiled to an ACCDE.
 - New `app-config` input to pass an application config file (database properties, procedures to run, modules/references to remove) through to `msaccess-vcs-build` for Access builds.
-- New `vcs-url` and `vcs-sha` inputs to select the `msaccess-vcs-addin` release used for Access builds and optionally verify its asset digest.
+- New `vcs-url` and `expected-sha256` inputs to select the `msaccess-vcs-addin` release used for Access builds and optionally verify its asset digest.
 
 ### Changed
 
@@ -89,3 +97,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v0.1.0
 [2.0.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v2.0.0
 [#31]: https://github.com/DecimalTurn/VBA-Build/pull/31
+[#47]: https://github.com/DecimalTurn/VBA-Build/pull/47
