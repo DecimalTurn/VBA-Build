@@ -1,4 +1,4 @@
-Source:  https://DecimalTurn@github.com/DecimalTurn/msaccess-vcs-build.git
+Source:  https://github.com/DecimalTurn/msaccess-vcs-build.git
 Commit:  685b323ffcf506c8b989ece2863e509bbf3775fa
 Note: vendors/msaccess-vcs-build/action.yml is reference-only and is NOT executed.
 Run 'pwsh -File scripts/Bundle-Vendors.ps1' to regenerate.

@@ -37,7 +37,20 @@ if (-not (Test-Path "$SubmodulePath/Build.ps1")) {
 
 # --- 2) Record source commit for provenance ---------------------------
 $srcCommit = git -C $SubmodulePath rev-parse HEAD
-$srcUrl    = git -C $SubmodulePath remote get-url origin
+# Use the canonical URL from .gitmodules (NOT the submodule's origin remote,
+# which can carry a machine-specific 'user@' prefix and would make SOURCE.txt
+# differ between developers/CI). Fall back to the origin remote with any
+# embedded credentials stripped.
+$srcUrl = git config -f .gitmodules --get "submodule.$SubmodulePath.url"
+if (-not $srcUrl) {
+    $srcUrl = git -C $SubmodulePath remote get-url origin
+    if ($srcUrl) {
+        $srcUrl = $srcUrl -replace '^([a-zA-Z][a-zA-Z0-9+.\-]*://)[^/@\s]+@', '$1'
+    }
+}
+if (-not $srcUrl) {
+    throw "Could not determine the source URL for $SubmodulePath."
+}
 
 # --- 3) Copy the whole upstream tree (decision: vendor everything) -----
 # Copy every file/folder in the submodule (Build.ps1, action.yml, README.md,
