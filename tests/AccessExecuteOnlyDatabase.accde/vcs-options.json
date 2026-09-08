@@ -4,7 +4,7 @@
     "AccessVersion": "16.0 64-bit"
   },
   "Options": {
-    "ExportFolder": "\\tests\\AccessDatabase.accde",
+    "ExportFolder": "\\tests\\AccessExecuteOnlyDatabase.accde",
     "UseFastSave": false,
     "SplitLayoutFromVBA": true,
     "ExportFormatVersion": "5.0.0",
