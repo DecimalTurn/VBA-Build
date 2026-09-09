@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-09
+
 ## Breaking changes
 
 - Access database builds now uses `msaccess-vcs-addin` **v5** ([#47])
@@ -99,3 +101,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [2.0.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v2.0.0
 [#31]: https://github.com/DecimalTurn/VBA-Build/pull/31
 [#47]: https://github.com/DecimalTurn/VBA-Build/pull/47
+[3.0.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v3.0.0
