@@ -120,6 +120,7 @@ function Invoke-AccessBuilds {
     }
     finally {
         Pop-Location
+        Remove-Item -Path $tempWorkDir -Recurse -Force -ErrorAction SilentlyContinue
     }
     if (-not $install -or -not $install.AddInPath) {
         throw "Failed to install the msaccess-vcs add-in (see output above)."
