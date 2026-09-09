@@ -1,0 +1,95 @@
+name: Auto-refresh vendors on Renovate PRs
+
+# Renovate's git-submodules manager bumps only the submodule gitlink (see
+# .gitmodules -> branch = rate-limiting). This workflow closes the gap: when
+# such a PR is opened/updated, it checks out the PR branch with submodules,
+# re-runs scripts/Bundle-Vendors.ps1 against the NEW submodule commit, and
+# commits the regenerated vendors/ back to the Renovate branch. That makes the
+# sync-vendors CI guard pass on the PR.
+#
+# Notes:
+# - Only runs for PRs authored by the hosted Renovate bot (renovate[bot]) in the
+#   same repository. GITHUB_TOKEN is read-only for fork PRs, so those are skipped.
+# - Hardened: the PR must change ONLY the submodule pointer (plus any regenerated
+#   vendors/). If it touches anything else - .gitmodules, scripts/, .github/, etc.
+#   - the job is skipped, so we never execute code modified by the PR head.
+# - Committing with GITHUB_TOKEN avoids starting a fresh privileged cycle; any
+#   resulting synchronize run is a no-op (vendors/ already in sync) and is
+#   serialized by the concurrency group below.
+# - If vendors/ is already in sync (e.g. re-run after our own push), the job
+#   commits nothing and exits cleanly.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  # Serialize runs per PR so two overlapping runs can't double-commit/race a push.
+  group: auto-refresh-vendors-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh vendored msaccess-vcs-build
+    # Exact bot login only - no branch-name fallback, which could be spoofed by
+    # a collaborator naming a branch renovate/*.
+    if: >-
+      github.event.pull_request.user.login == 'renovate[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch (with submodules)
+        uses: actions/checkout@v6
+        with:
+          # Check out the branch (not the merge ref) so we operate and push on
+          # the Renovate PR's own branch, at its latest state.
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Skip unless only the submodule pointer changed
+        # Diff-scope gate. Proceed only when the PR moves the submodule gitlink
+        # (plus, at most, already-regenerated vendors/). If anything else changed
+        # (.gitmodules, scripts/, .github/, ...) we skip, so the bundled
+        # scripts/Bundle-Vendors.ps1 we run is the trusted base version.
+        shell: bash
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          GITLINK="submodules/msaccess-vcs-build"
+
+          CHANGED="$(git diff --name-only "$BASE" "$HEAD")"
+
+          # The submodule pointer must have actually moved.
+          if ! printf '%s\n' "$CHANGED" | grep -qx "$GITLINK"; then
+            echo "Submodule pointer did not move in this PR; nothing to refresh."
+            exit 0
+          fi
+
+          # Nothing beyond the gitlink and vendors/ may change.
+          DISALLOWED="$(printf '%s\n' "$CHANGED" | grep -vx "$GITLINK" | grep -v '^vendors/' || true)"
+          if [ -n "$DISALLOWED" ]; then
+            echo "PR changes files beyond the submodule pointer and vendors/; skipping auto-refresh for safety."
+            printf '%s\n' "$DISALLOWED"
+            exit 0
+          fi
+
+      - name: Regenerate vendored files
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/Bundle-Vendors.ps1
+
+      - name: Commit and push refresh
+        shell: bash
+        run: |
+          if git diff --quiet -- vendors/; then
+            echo "vendors/ is already in sync; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendors/
+          git commit -m "chore: refresh vendored msaccess-vcs-build for submodule update"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          echo "Pushed vendors/ refresh to ${{ github.event.pull_request.head.ref }}."

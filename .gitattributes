@@ -4,3 +4,8 @@ tests/** linguist-detectable=false
 
 # Don't include devcontainer files
 .devcontainer/** linguist-detectable=false
+
+# Vendored upstream files: force LF in the repo and on checkout so
+# scripts/Bundle-Vendors.ps1 regenerates byte-identical output on any OS
+# (keeps the CI sync-guard's `git diff --exit-code` reliable).
+vendors/msaccess-vcs-build/** text eol=lf

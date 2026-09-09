@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Access builds now delegate compile and prepare steps to `msaccess-vcs-build@v1.1.0` (previously `v1.0.1`).
+- Reworked the internal Access build path: `Main.ps1` now builds Access databases directly from vendored `msaccess-vcs-build` scripts (pinned `DecimalTurn` fork) instead of the `msaccess-vcs-build-all` composite subaction. Removes the previous 5-folder limit on Access builds; no input changes required.
 
 ## [2.0.0] - 2026-02-18
 
