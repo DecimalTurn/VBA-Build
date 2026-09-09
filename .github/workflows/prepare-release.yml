@@ -105,6 +105,26 @@ jobs:
             echo "[$NEW_VERSION]: $release_url" >> CHANGELOG.md
           fi
 
+      - name: Extract release notes from CHANGELOG
+        run: |
+          version="${{ steps.next_version.outputs.version }}"
+          # Extract lines between the version header and the next version header.
+          # Trim surrounding blank lines and normalize changelog issue refs (e.g. ([#123])) by stripping square brackets.
+          awk -v version="$version" \
+            '$0 ~ "^## \\[" version "\\]" {found=1; next} found && /^## \[[0-9]/ {exit} found {print}' \
+            CHANGELOG.md \
+            | sed '/./,$!d' | sed -e :a -e '/^\s*$/{$d;N;ba}' \
+            | sed 's/\[#\([0-9]\+\)\]/#\1/g' > release-notes.md
+          if [[ ! -s release-notes.md ]]; then
+            echo "(No changelog entries found for $version)" > release-notes.md
+          fi
+          tag="v$version"
+          prev_tag=$(git tag --sort=-version:refname | head -1)
+          if [[ -n "$prev_tag" ]]; then
+            echo "" >> release-notes.md
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${prev_tag}...${tag}" >> release-notes.md
+          fi
+
       - name: Commit changes
         id: commit
         run: |
@@ -121,7 +141,7 @@ jobs:
         with:
           tag_name: ${{ steps.next_version.outputs.tag }}
           target_commitish: ${{ steps.commit.outputs.sha }}
-          generate_release_notes: true
+          body_path: release-notes.md
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
