@@ -4,6 +4,12 @@ on:
   release:
     types:
       - published
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to update (leave blank to use the latest published release)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -22,8 +28,20 @@ jobs:
       - name: Resolve major tag alias
         id: resolve
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
         run: |
-          release_tag="${{ github.event.release.tag_name }}"
+          release_tag="$RELEASE_TAG_INPUT"
+          if [[ -z "$release_tag" ]]; then
+            release_tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
+          fi
+
+          if [[ -z "$release_tag" ]]; then
+            echo "Unable to resolve a release tag." >&2
+            exit 1
+          fi
+
           echo "Release tag: $release_tag"
 
           if [[ "$release_tag" =~ ^v([0-9]+)(\.[0-9]+){0,2}$ ]]; then
