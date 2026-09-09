@@ -116,6 +116,7 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Create Draft Release
+        id: create_draft_release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.next_version.outputs.tag }}
@@ -127,10 +128,11 @@ jobs:
 
       - name: Add release link to summary
         run: |
-          release_url="https://github.com/${{ github.repository }}/releases/tag/${{ steps.next_version.outputs.tag }}"
+          release_url="${{ steps.create_draft_release.outputs.url }}"
+          tag="${{ steps.next_version.outputs.tag }}"
           {
             echo "## Release prepared"
             echo ""
-            echo "- Tag: \`${{ steps.next_version.outputs.tag }}\`"
-            echo "- Draft release: [$release_url]($release_url)"
+            echo "- Tag: \`${tag}\`"
+            echo "- Draft release: [${release_url}](${release_url})"
           } >> "$GITHUB_STEP_SUMMARY"
