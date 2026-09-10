@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR branch (with submodules)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Check out the branch (not the merge ref) so we operate and push on
           # the Renovate PR's own branch, at its latest state.
