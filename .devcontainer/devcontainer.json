@@ -1,10 +1,13 @@
 {
-  "name": "PowerShell Dev Container",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "name": "VBA Build Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
   "postCreateCommand": "pwsh -Command \"Write-Host 'PowerShell ready!'\"",
-  "features": {},
+  "features": {
+    "ghcr.io/devcontainers/features/powershell:2": {},
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "8.0"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
