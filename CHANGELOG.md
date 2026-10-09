@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Vendored `msaccess-vcs-build` now comes from the official `AccessCodeLib` repository at release `v1.1.1` instead of a fork with the rate limiting fix.
+
 ## [3.0.0] - 2026-09-09
 
 ## Breaking changes

@@ -11,7 +11,7 @@ Write-Host "Download url: $AccUnitUrl"
 
 $TargetOfficeApp = "Access"
 . "$PSScriptRoot/Get-GitHubHeaders.ps1"
-$headers = Get-GitHubHeaders
+$headers = Get-GitHubHeaders -Uri $AccUnitUrl
 $release = Invoke-RestMethod -Uri $AccUnitUrl -Headers $headers
 
 # zip url

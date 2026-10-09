@@ -1,7 +1,7 @@
 name: Auto-refresh vendors on Renovate PRs
 
-# Renovate's git-submodules manager bumps only the submodule gitlink (see
-# .gitmodules -> branch = rate-limiting). This workflow closes the gap: when
+# Renovate's git-submodules manager bumps the submodule gitlink and the release
+# tag in .gitmodules (branch = vX.Y.Z). This workflow closes the gap: when
 # such a PR is opened/updated, it checks out the PR branch with submodules,
 # re-runs scripts/Bundle-Vendors.ps1 against the NEW submodule commit, and
 # commits the regenerated vendors/ back to the Renovate branch. That makes the
@@ -10,9 +10,9 @@ name: Auto-refresh vendors on Renovate PRs
 # Notes:
 # - Only runs for PRs authored by the hosted Renovate bot (renovate[bot]) in the
 #   same repository. GITHUB_TOKEN is read-only for fork PRs, so those are skipped.
-# - Hardened: the PR must change ONLY the submodule pointer (plus any regenerated
-#   vendors/). If it touches anything else - .gitmodules, scripts/, .github/, etc.
-#   - the job is skipped, so we never execute code modified by the PR head.
+# - Hardened: the PR must change ONLY the submodule pointer, the submodule's
+#   `branch` (tag) in .gitmodules, and regenerated vendors/. If it touches anything
+#   else - .gitmodules url, scripts/, .github/, etc. - the job is skipped.
 # - Committing with GITHUB_TOKEN avoids starting a fresh privileged cycle; any
 #   resulting synchronize run is a no-op (vendors/ already in sync) and is
 #   serialized by the concurrency group below.
@@ -68,8 +68,16 @@ jobs:
             exit 0
           fi
 
-          # Nothing beyond the gitlink and vendors/ may change.
-          DISALLOWED="$(printf '%s\n' "$CHANGED" | grep -vx "$GITLINK" | grep -v '^vendors/' || true)"
+          # Nothing beyond the gitlink, .gitmodules and vendors/ may change.
+          DISALLOWED="$(printf '%s\n' "$CHANGED" | grep -vx "$GITLINK" | grep -vx '.gitmodules' | grep -v '^vendors/' || true)"
+
+          # In .gitmodules, only the submodule's `branch` (release tag) may change.
+          if printf '%s\n' "$CHANGED" | grep -qx '.gitmodules'; then
+            strip_branch() { git config --blob "$1:.gitmodules" --list | grep -v "^submodule\.$GITLINK\.branch="; }
+            if [ "$(strip_branch "$BASE")" != "$(strip_branch "$HEAD")" ]; then
+              DISALLOWED="$DISALLOWED"$'\n'".gitmodules (beyond branch)"
+            fi
+          fi
           if [ -n "$DISALLOWED" ]; then
             echo "PR changes files beyond the submodule pointer and vendors/; skipping auto-refresh for safety."
             printf '%s\n' "$DISALLOWED"

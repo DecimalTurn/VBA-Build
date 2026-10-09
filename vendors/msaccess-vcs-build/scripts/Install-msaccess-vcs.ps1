@@ -13,7 +13,7 @@ param(
 Write-Host "Download url: $vcsUrl"
 
 . "$PSScriptRoot/Get-GitHubHeaders.ps1"
-$headers = Get-GitHubHeaders
+$headers = Get-GitHubHeaders -Uri $vcsUrl
 $release = Invoke-RestMethod -Uri $vcsUrl -Headers $headers
 
 # zip url

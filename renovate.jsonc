@@ -5,6 +5,8 @@
   ],
   "minimumReleaseAge": "5 days",
   "prCreation": "not-pending",
+  // Submodules pinned to a release tag (`branch = vX.Y.Z` in .gitmodules) are
+  // bumped to the latest tag; Renovate updates both .gitmodules and the gitlink.
   "git-submodules": {
     "enabled": true
   }

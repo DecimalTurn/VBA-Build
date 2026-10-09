@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
     Refreshes the committed vendors/msaccess-vcs-build tree from the
-    submodules/msaccess-vcs-build submodule (the DecimalTurn/msaccess-vcs-build
-    rate-limiting fork at its pinned commit).
+    submodules/msaccess-vcs-build submodule (AccessCodeLib/msaccess-vcs-build
+    at its pinned release tag).
 
 .DESCRIPTION
     Copies the whole upstream tree (Build.ps1, action.yml, README.md, LICENSE,
