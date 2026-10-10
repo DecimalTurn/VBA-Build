@@ -6,7 +6,11 @@ SHELL ["/bin/bash", "-c"]
    
 # Install Git
 RUN apt-get update && \
-    apt-get install -y git
+    apt-get install -y ca-certificates curl git && \
+    curl -fsSL https://deb.nodesource.com/setup_26.x | bash - && \
+    apt-get install -y nodejs && \
+    node --version && \
+    npm --version
 
 # Configure Git aliases
 RUN git config --global alias.undo "reset --soft HEAD^" && \
