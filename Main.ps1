@@ -75,7 +75,7 @@ function Assert-VcsAddinDigest {
     . "$VendorBuildDir/scripts/Get-GitHubHeaders.ps1"
     Write-Host "Verifying add-in digest against: $ReleaseUrl"
 
-    $release = Invoke-RestMethod -Uri $ReleaseUrl -Headers (Get-GitHubHeaders)
+    $release = Invoke-RestMethod -Uri $ReleaseUrl -Headers (Get-GitHubHeaders -Uri $ReleaseUrl)
 
     # Select the SAME asset the installer downloads (Version*.zip), not
     # .assets[0], so we verify exactly the file that will be installed.
