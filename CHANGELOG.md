@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-10-10
+
 ### Changed
 
 - Vendored `msaccess-vcs-build` now comes from the official `AccessCodeLib` repository at release `v1.1.1` instead of a fork with the rate limiting fix.
@@ -106,3 +108,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#31]: https://github.com/DecimalTurn/VBA-Build/pull/31
 [#47]: https://github.com/DecimalTurn/VBA-Build/pull/47
 [3.0.0]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v3.0.0
+[3.0.1]: https://github.com/DecimalTurn/VBA-Build/releases/tag/v3.0.1
