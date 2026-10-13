@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ matrix.windows-version }}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: "Setup VBA runtime"
         uses: DecimalTurn/setup-vba@797e4a232699a98507cb4411d5bea3697427ad57 # v0.3.0
         with:
@@ -102,7 +102,7 @@ jobs:
         windows-version: [windows-2025]
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         
       - name: "Download Build Artifact"
         uses: actions/download-artifact@v8
